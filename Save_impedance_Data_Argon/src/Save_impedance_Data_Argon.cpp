@@ -12,22 +12,25 @@
 #include <SdFat.h>
 
 const int chipSelect=SS;//to activate SD reader?
+const int STARTPIN=A1;
 const uint SDTIME=5000;//every 5 sec
-const char FILE_BASE_NAME[]="Ratio";
+const char FILE_BASE_NAME[]="Data";
 int fileNumber;
 //file system objects
 SdFat sd;
-SdFile file;
+SdFile file;//to put logged data into
 //timer for data record
 unsigned int logTime;//where does logTime get defined?
 unsigned int startTime;
 unsigned int sdTimer;//when to write to SD card
 int i;
+float ratio;
+bool logStart;//for button press
 
 //const int STARTPIN=D9;//???is this for button?
 
 const uint8_t BASE_NAME_SIZE=sizeof(FILE_BASE_NAME)-1;
-char fileName[13];
+char fileName[13];// why 13? data+4more char (.csv) one to mark end of array
 
 SYSTEM_MODE(AUTOMATIC);
 
@@ -45,39 +48,47 @@ void setup(){
   delay(100);
   Serial.printf("Starting Up...");
 
-  //pinMode(STARTPIN,INPUT_PULLDOWN);
+  pinMode(STARTPIN,INPUT_PULLDOWN);
 
   if(!sd.begin(chipSelect,SD_SCK_MHZ(10))) {
     Serial.printf("Error starting SD Module");
   }
-  if (BASE_NAME_SIZE>6){
+  if (BASE_NAME_SIZE >6){
     Serial.println("FILE_BASE_NAME too long");
     while(1);//stop program chip select (SS)??? 1 is off
   }
   fileNumber=0;
   sprintf(fileName,"%s%02i.csv",FILE_BASE_NAME,fileNumber);//not sure where this goes
-  sdTimer=0;
+  //sdTimer=millis();
 }
 
 
 void loop() {
+  ratio=random(0,100);//just to stand in for real data for now
   //if ((millis()-sdTimer)>SDTIME){
-  //Serial.printf("Starting Data Logging\n");
-  while (sd.exists(fileName)){//????
+ Serial.println("Press button to log data\n");
+ logStart=digitalRead(STARTPIN);
+ while(logStart==false){
+  
+  logStart=digitalRead(STARTPIN);
+  delay(5);//why this delay?
+ }
+  Serial.printf("Starting Data Logging\n");
+  while (sd.exists(fileName)){//????//if that file has already been created
     fileNumber++;
-    sprintf(fileName, "%s02i.csv",FILE_BASE_NAME,fileNumber);//writes to sd card?
+    sprintf(fileName, "%s02i.csv",FILE_BASE_NAME,fileNumber);//writes to sd card? string print "file name" is first argument where it's put
     Serial.printf("Filename is %s\n",fileName);//writes to serial monitor
   }
-  if (!file.open(fileName,0_WRONLY | 0_CREAT | 0_EXCL)) {
+  if (!file.open(fileName,O_WRONLY | O_CREAT | O_EXCL)) {//writeread,create,exclusive (doesn't already exist)
     Serial.println("File Failed to Open");
   }
-  file.printf("TimeStamp, ratio \n"); //save to sd card? (impedance ratio) is TimeStamp variable part of library?                  // print header row
+  file.printf("TimeStamp, ratio \n"); //just like serial print only to sd card? // print header row
   Serial.printf("\nLogging to: %s \n",fileName);
   startTime = micros();
   for (i=0;i<100;i++) {
     logTime = micros() - startTime;
     Serial.print("x");
-    file.printf("%u , %i \n",logTime,random(0,100));  //print timestamp and random number to file
+    file.printf("%u , %i \n",logTime,ratio);  //print timestamp and random number to file
     delay(random(100,500));           //delays are bad, this delay is for demo purposes only
   }
   
@@ -85,6 +96,6 @@ void loop() {
   Serial.printf("Done \n");
   delay(5000);//every 5 sec
 
-  //sdTimer=0;
+  
 }
 
