@@ -8,17 +8,17 @@
 
 // Include Particle Device OS APIs
 #include "Particle.h"//need to have credentials in ignore file
-#include<math.h>
+#include<math.h>//for sin wave
 #include <Adafruit_MQTT.h>
 #include "Adafruit_MQTT/Adafruit_MQTT_SPARK.h"
 #include "Adafruit_MQTT/Adafruit_MQTT.h"
-#include "credentials.h"
+#include "credentials.h"//be sure to add to ignore file
 
 TCPClient TheClient; 
 
 Adafruit_MQTT_SPARK mqtt(&TheClient,AIO_SERVER,AIO_SERVERPORT,AIO_USERNAME,AIO_KEY); 
 
-Adafruit_MQTT_Publish pubFeedZDataFreq = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/ZDataFreq");
+Adafruit_MQTT_Publish pubFeedZDataFreq = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/ZDataFreq");//maybe won't use all
 Adafruit_MQTT_Publish pubFeedZDataPulse = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/ZDataPulse");
 Adafruit_MQTT_Publish pubFeedZDataPlant = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/ZDataPlant");
 Adafruit_MQTT_Publish pubFeedZDataRatio = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/ZDataRatio");
@@ -28,21 +28,23 @@ const int PULSEREADPIN=A2;
 const int PLANTREADPIN=A1;
 const int AVSIG=127;//average signal applied to pulse pin 127 produces equal on off (square wave?)
 int i;//counter to fill array at all frequecies
-float hz;//start hz at 100 (like multipip range is 5-50,000 Hz) Adrian started with 500Hz
+int hz;//start hz at 100 (like multipip range is 5-50,000 Hz) Adrian started with 500Hz
 float pulse;
 float plant;
 float ratio;
 float maxRatio;//output from read function
+/*////needed if using sin wave
 float sinwave;
 float A;
 float t;
 float v;//frequency
 float B;//offset
-unsigned int lastTimePub;
+*/
+unsigned int lastTimePub;//for publishing timing to Adafruit
 /////////function to read AP style impedance (ratio)///////
 float ratReadArray[100][2];//array will contain freq and max ratio for 100 freqs (steps of 500hz)
 
-float ratAPRead(hz);//declare function
+float ratAPRead(int hz);//declare function
 
 void MQTT_connect();
 bool MQTT_ping();
@@ -63,16 +65,18 @@ void setup() {
   pinMode(PLANTREADPIN, INPUT);
 
   hz=500;
+  /*
   A=255/2.0;//amplitude
   t=millis()/1000.0; //time in seconds
   v=500;//frequency
   B=255/2.0;//offset
+  */
   i=0;
 }
 
 
 void loop() {
-   MQTT_connect();
+  MQTT_connect();
   MQTT_ping();
 
   //sinwave=A* sin(2 * M_PI * v * t)+B; //for sin wave, but won't be able to get high enough frequencies
@@ -81,16 +85,16 @@ void loop() {
   if(i<100){//keep reading until array full
   maxRatio=ratAPRead(hz);
     ratReadArray[i][0]=hz;
-    ratReadArray[i][1]=maxRatio;
+    ratReadArray[i][1]=maxRatio;//couldn't I just call function here?
     Serial.printf("ratioMax at %f=%.2f\n",hz,maxRatio);//after 1 sec print max ratio at that freq, just to check get rid of this later
     i++;
-    hz=hz+500;
+    hz=hz+500;//through 50,000 hz max
      }
-     if((millis()-lastTimePub > 6000)) {//publishing (how often?)
+     if((millis()-lastTimePub > 10000)) {//publishing (how often?)
     if(mqtt.Update()) {
       pubFeedZDataFreq.publish(hz);//publish Hz
       pubFeedZDataRatio.publish(maxRatio);//publish max Freq
-      Serial.printf("Publishing %.2f at %.2f\n",maxRatio,hz); 
+      Serial.printf("Publishing %.2f at %i\n",maxRatio,hz); 
       } 
     lastTimePub = millis();
   }
@@ -106,7 +110,7 @@ void loop() {
   */
   
 }
-float ratAPRead(float hz) {//function to measure max plant/pulse ratio at 100 frequencies and put into array to write to sd card
+float ratAPRead(int hz) {//function to measure max plant/pulse ratio at 100 frequencies and put into array to write to sd card
   const int READTIME=1000;
   unsigned int startRead;
   //int hz;
