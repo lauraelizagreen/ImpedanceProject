@@ -7,12 +7,12 @@
  */
 
 // Include Particle Device OS APIs
-#include "Particle.h"
+//#include "Particle.h"
 #include <SPI.h>
 #include <SdFat.h>
 
 const int chipSelect=SS;//to activate SD reader?
-const int STARTPIN=A1;
+const int STARTPIN=D9;
 const uint SDTIME=5000;//every 5 sec
 const char FILE_BASE_NAME[]="Data";
 int fileNumber;
@@ -32,7 +32,7 @@ bool logStart;//for button press
 const uint8_t BASE_NAME_SIZE=sizeof(FILE_BASE_NAME)-1;
 char fileName[13];// why 13? data+4more char (.csv) one to mark end of array
 
-SYSTEM_MODE(AUTOMATIC);
+SYSTEM_MODE(SEMI_AUTOMATIC);
 
 
 
@@ -66,7 +66,7 @@ void setup(){
 void loop() {
   ratio=random(0,100);//just to stand in for real data for now
   //if ((millis()-sdTimer)>SDTIME){
- Serial.println("Press button to log data\n");
+ Serial.printf("Press button to log data\n");
  logStart=digitalRead(STARTPIN);
  while(logStart==false){
   
@@ -88,7 +88,7 @@ void loop() {
   for (i=0;i<100;i++) {
     logTime = micros() - startTime;
     Serial.print("x");
-    file.printf("%u , %i \n",logTime,ratio);  //print timestamp and random number to file
+    file.printf("%u , %i \n",logTime,random(0,100));  //print timestamp and random number to file
     delay(random(100,500));           //delays are bad, this delay is for demo purposes only
   }
   
