@@ -86,18 +86,31 @@ void loop() {
   maxRatio=ratAPRead(hz);
     ratReadArray[i][0]=hz;
     ratReadArray[i][1]=maxRatio;//couldn't I just call function here?
-    Serial.printf("ratioMax at %f=%.2f\n",hz,maxRatio);//after 1 sec print max ratio at that freq, just to check get rid of this later
-    i++;
-    hz=hz+500;//through 50,000 hz max
-     }
+    Serial.printf("ratioMax at %i=%.2f\n",hz,maxRatio);//print max ratio at that freq, just to check get rid of this later
+    
+  
      if((millis()-lastTimePub > 10000)) {//publishing (how often?)
     if(mqtt.Update()) {
       pubFeedZDataFreq.publish(hz);//publish Hz
       pubFeedZDataRatio.publish(maxRatio);//publish max Freq
-      Serial.printf("Publishing %.2f at %i\n",maxRatio,hz); 
+      Serial.printf("Publishing %.2f at %i\n",maxRatio,hz);
+      lastTimePub=millis();  
       } 
-    lastTimePub = millis();
+      }
+     lastTimePub++;
+     i++;
+  hz=hz+500;//through 50,000 hz max
+   
+     
+    
   }
+  else{
+  i=0;
+  hz=500;
+  
+  }
+
+  
   
   //analogWrite(PULSEPIN,AVSIG,hz);//replace with function
   //analogWrite(PULSEPIN,sinwave);//why is amplitude btw 0-255, but output 0-4096?
