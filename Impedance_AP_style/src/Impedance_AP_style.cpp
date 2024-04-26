@@ -13,7 +13,7 @@
 #include "Adafruit_MQTT/Adafruit_MQTT_SPARK.h"
 #include "Adafruit_MQTT/Adafruit_MQTT.h"
 #include "credentials.h"//be sure to add to ignore file
-
+/*
 TCPClient TheClient; 
 
 Adafruit_MQTT_SPARK mqtt(&TheClient,AIO_SERVER,AIO_SERVERPORT,AIO_USERNAME,AIO_KEY); 
@@ -22,7 +22,7 @@ Adafruit_MQTT_Publish pubFeedZDataFreq = Adafruit_MQTT_Publish(&mqtt, AIO_USERNA
 Adafruit_MQTT_Publish pubFeedZDataPulse = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/ZDataPulse");
 Adafruit_MQTT_Publish pubFeedZDataPlant = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/ZDataPlant");
 Adafruit_MQTT_Publish pubFeedZDataRatio = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/ZDataRatio");
-
+*/
 const int PULSEPIN=A5;//PWM pin
 const int PULSEREADPIN=A2;
 const int PLANTREADPIN=A1;
@@ -46,10 +46,10 @@ float ratReadArray[100][2];//array will contain freq and max ratio for 100 freqs
 
 float ratAPRead(int hz);//declare function
 
-void MQTT_connect();
-bool MQTT_ping();
+//void MQTT_connect();
+//bool MQTT_ping();
 // Let Device OS manage the connection to the Particle Cloud
-SYSTEM_MODE(AUTOMATIC);
+SYSTEM_MODE(SEMI_AUTOMATIC);
 
 // Run the application and system concurrently in separate threads
 //SYSTEM_THREAD(ENABLED);
@@ -76,8 +76,8 @@ void setup() {
 
 
 void loop() {
-  MQTT_connect();
-  MQTT_ping();
+  //MQTT_connect();
+  //MQTT_ping();
 
   //sinwave=A* sin(2 * M_PI * v * t)+B; //for sin wave, but won't be able to get high enough frequencies
 

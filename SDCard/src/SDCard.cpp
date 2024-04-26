@@ -11,10 +11,10 @@
 #include <SdFat.h>
 
 const int CS=A5;//chip select (can be any digital pin)
-const int DATAINT=5000;//interval btw data collection
+const int DATAINT=15000;//interval btw data collection
 const char FILE_BASE_NAME[]="Data";
 const uint8_t BASE_NAME_SIZE=sizeof(FILE_BASE_NAME)-1;
-char fileName[20];
+char fileName[13];
 int fileNumber;
 int dataArray[3];//one-dimensional array to put each data line
 
@@ -44,9 +44,9 @@ void setup() {
     while(1);//stop program
   }
   fileNumber=0;
-  sprintf(fileName,"%s%02i.csv",FILE_BASE_NAME,fileNumber);
+  sprintf(fileName,"%s%02i.csv",FILE_BASE_NAME,fileNumber);//first file with number 0
    
-  while (sd.exists(fileName)) {  //cycle through files until number not found
+  while (sd.exists(fileName)) {  //cycle through files until number not found for unwritten file
     fileNumber++;
     sprintf(fileName,"%s%02i.csv",FILE_BASE_NAME,fileNumber); //create numbered filename, (sprint prints to file that is 1st argument)
     Serial.printf("Filename is %s\n",fileName);//print to serial monitor
@@ -85,6 +85,7 @@ void writeSD(int dataArray[3]){
     Serial.printf("Filename is %s\n",fileName);//print to serial monitor
   }
   */
+  
   
   if (!file.open(fileName, O_WRONLY | O_CREAT | O_EXCL)) { // open file for printing
     Serial.println("File Failed to Open");

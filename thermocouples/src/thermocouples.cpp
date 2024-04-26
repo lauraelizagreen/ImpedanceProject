@@ -1,35 +1,57 @@
 /* 
- * Project myProject
- * Author: Your Name
- * Date: 
+ * Project thermocouples
+ * Author: Laura Green
+ * Date: April 26, 2024
  * For comprehensive documentation and examples, please visit:
  * https://docs.particle.io/firmware/best-practices/firmware-template/
  */
 
 // Include Particle Device OS APIs
 #include "Particle.h"
+#include <SparkFun_MCP9600.h>
+
+
+float tcTemp;
+float ambTemp;
+float deltaTemp;
+
+MCP9600 tempSensor;
 
 // Let Device OS manage the connection to the Particle Cloud
 SYSTEM_MODE(AUTOMATIC);
 
 // Run the application and system concurrently in separate threads
-SYSTEM_THREAD(ENABLED);
+//SYSTEM_THREAD(ENABLED);
 
-// Show system, cloud connectivity, and application logs over USB
-// View logs with CLI using 'particle serial monitor --follow'
-SerialLogHandler logHandler(LOG_LEVEL_INFO);
 
-// setup() runs once, when the device is first turned on
 void setup() {
-  // Put initialization like pinMode and begin functions here
+  Serial.begin(9600);
+  Wire.begin();
+  Wire.setClock(100000);
+  tempSensor.begin();
+//check connection
+  if(tempSensor.isConnected()){
+    Serial.println("Device will acknowledge!");
+  }
+  else{
+    Serial.println("Device did not acknowledge! Freezing.");
+    while(1);//stay here
+  }
+//check device id
+  if(tempSensor.checkDeviceID()){
+        Serial.println("Device ID is correct!");        
+    }
+    else {
+        Serial.println("Device ID is not correct! Freezing.");
+        while(1);
+    }
 }
-
-// loop() runs over and over again, as quickly as it can execute.
-void loop() {
-  // The core of your code will likely live here.
-
-  // Example: Publish event to cloud every 10 seconds. Uncomment the next 3 lines to try it!
-  // Log.info("Sending Hello World to the cloud!");
-  // Particle.publish("Hello world!");
-  // delay( 10 * 1000 ); // milliseconds and blocking - see docs for more info!
+void loop(){
+if(tempSensor.available()){
+  tcTemp=tempSensor.getThermocoupleTemp();
+  ambTemp=tempSensor.getAmbientTemp();
+  deltaTemp=tempSensor.getTempDelta();
+        Serial.printf("Thermocouple:%0.2f°C\nAmbient:%0.2f°C\nDelta:%0.2f°C\n",tcTemp,ambTemp,deltaTemp);
+       delay(2000); 
+  }
 }
