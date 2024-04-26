@@ -7,15 +7,14 @@
  */
 
 // Include Particle Device OS APIs
-#include "Particle.h"
 #include <SPI.h>
 #include <SdFat.h>
 
-const int CS=SS;//chip select (can be any digital pin)
+const int CS=A5;//chip select (can be any digital pin)
 const int DATAINT=5000;//interval btw data collection
 const char FILE_BASE_NAME[]="Data";
 const uint8_t BASE_NAME_SIZE=sizeof(FILE_BASE_NAME)-1;
-char fileName[13];
+char fileName[20];
 int fileNumber;
 int dataArray[3];//one-dimensional array to put each data line
 
@@ -45,6 +44,7 @@ void setup() {
     while(1);//stop program
   }
   fileNumber=0;
+  sprintf(fileName,"%s%02i.csv",FILE_BASE_NAME,fileNumber);
    
   while (sd.exists(fileName)) {  //cycle through files until number not found
     fileNumber++;
@@ -68,21 +68,23 @@ void setup() {
 
 void loop() {
   if((millis()-dataTimer)>DATAINT){
-  dataArray[0]=(int)Time.now();
+  dataArray[0]=(int)Time.now();//function to get unix time
   dataArray[1]=random(0,10);
   dataArray[2]=random(100,1000);
-  writeSD(dataArray);//call function
+  writeSD(dataArray);//call function with array as argument
   dataTimer=millis();
 
 }
 }
 //////define function to write to SD card
 void writeSD(int dataArray[3]){
+  /*
   while (sd.exists(fileName)) {  //cycle through files until number not found
     fileNumber++;
     sprintf(fileName,"%s%02i.csv",FILE_BASE_NAME,fileNumber); //create numbered filename, (sprint prints to file that is 1st argument)
     Serial.printf("Filename is %s\n",fileName);//print to serial monitor
   }
+  */
   
   if (!file.open(fileName, O_WRONLY | O_CREAT | O_EXCL)) { // open file for printing
     Serial.println("File Failed to Open");

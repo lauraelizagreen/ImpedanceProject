@@ -4,5 +4,6 @@
     "files.associations": {
         "*.ino": "cpp"
     },
-    "particle.targetPlatform": "argon"
+    "particle.targetPlatform": "argon",
+    "particle.firmwareVersion": "5.8.0"
 }
