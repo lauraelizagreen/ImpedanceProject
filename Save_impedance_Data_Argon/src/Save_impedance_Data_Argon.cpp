@@ -64,15 +64,15 @@ void setup(){
 
 
 void loop() {
-  ratio=random(0,100);//just to stand in for real data for now
+  //ratio=random(0,100);//just to stand in for real data for now
   //if ((millis()-sdTimer)>SDTIME){
  Serial.printf("Press button to log data\n");
  logStart=digitalRead(STARTPIN);
  while(logStart==false){
-  
   logStart=digitalRead(STARTPIN);
   delay(5);//why this delay?
  }
+
   Serial.printf("Starting Data Logging\n");
   while (sd.exists(fileName)){//????//if that file has already been created
     fileNumber++;
