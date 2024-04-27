@@ -16,6 +16,7 @@ float ambTemp;
 float deltaTemp;
 
 MCP9600 tempSensor;
+Thermocouple_Type type = TYPE_K; //can change type here
 
 // Let Device OS manage the connection to the Particle Cloud
 SYSTEM_MODE(AUTOMATIC);
@@ -31,22 +32,37 @@ void setup() {
   tempSensor.begin();
 //check connection
   if(tempSensor.isConnected()){
-    Serial.println("Device will acknowledge!");
+    Serial.printf("Device will acknowledge!");
   }
   else{
-    Serial.println("Device did not acknowledge! Freezing.");
+    Serial.printf("Device did not acknowledge! Freezing.");
     while(1);//stay here
   }
 //check device id
   if(tempSensor.checkDeviceID()){
-        Serial.println("Device ID is correct!");        
+        Serial.printf("Device ID is correct!");        
     }
     else {
-        Serial.println("Device ID is not correct! Freezing.");
+        Serial.printf("Device ID is not correct! Freezing.");
         while(1);
     }
+
+    //change the thermocouple type being used
+    Serial.printf("Setting Thermocouple Type!");
+    tempSensor.setThermocoupleType(type);
+
+    //make sure the type was set correctly!
+    if(tempSensor.getThermocoupleType() == type){
+        Serial.printf("Thermocouple Type set sucessfully!");
+    }
+
+    else{
+        Serial.printf("Setting Thermocouple Type failed!");
+}
 }
 void loop(){
+
+  
 if(tempSensor.available()){
   tcTemp=tempSensor.getThermocoupleTemp();
   ambTemp=tempSensor.getAmbientTemp();

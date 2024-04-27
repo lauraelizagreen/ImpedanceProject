@@ -87,7 +87,7 @@ void writeSD(int dataArray[3]){
   */
   
   
-  if (!file.open(fileName, O_WRONLY | O_CREAT | O_EXCL)) { // open file for printing
+  if (!file.open(fileName, O_WRONLY | O_AT_END)) { // open file for printing and append to end
     Serial.println("File Failed to Open");
   }
   file.printf("%i,%i,%i\n",dataArray[0],dataArray[1],dataArray[2]);  // print header row
