@@ -30,6 +30,8 @@ float plant;
 float ratio;
 float maxRatio;//output from read function
 float ratReadArray[100][2];//array will contain freq and max ratio for 100 freqs (steps of 500hz)
+const int DATAINT=15000;//timing of data collection-not sure what this will be yet.
+int dataTimer;
 /*////needed if using sin wave
 float sinwave;
 float A;
@@ -137,7 +139,7 @@ if(i<100){//keep reading until array full
  }
  */
 if((millis()-dataTimer)>DATAINT){
-  dataArray[0]=(int)Time.now();//function to get unix time
+  ratReadArray[0]=(int)Time.now();//function to get unix time (and change array)
   dataArray[1]=random(0,10);
   dataArray[2]=random(100,1000);
   writeSD(dataArray);//call function with array as argument
