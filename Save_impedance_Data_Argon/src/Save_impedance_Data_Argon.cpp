@@ -11,7 +11,7 @@
 #include <SPI.h>
 #include <SdFat.h>
 ///data types for SD Card reader
-const int CS=A5;//to activate SD reader set low or SS (can be any digital pin)
+const int CS=D2;//to activate SD reader set low or SS (can be any digital pin)
 //const int STARTPIN=D9;//if want button to log
 const uint SDTIME=15000;//every 15 sec
 const char FILE_BASE_NAME[]="Data";
@@ -19,8 +19,8 @@ int fileNumber;
 const uint8_t BASE_NAME_SIZE=sizeof(FILE_BASE_NAME)-1;
 char fileName[13];// why 13: data+4more char (.csv) one to mark end of array
 ////for AP style "impedance"
-const int PULSEPIN=A5;//PWM pin
-const int PULSEREADPIN=A2;
+const int PULSEPIN=A2;//PWM pin
+const int PULSEREADPIN=A5;
 const int PLANTREADPIN=A1;
 const int AVSIG=127;//average signal applied to pulse pin 127 produces equal on off (square wave?)
 int i;//counter to fill array at all frequecies
@@ -32,6 +32,7 @@ float maxRatio;//output from read function
 float ratReadArray[100][2];//array will contain freq and max ratio for 100 freqs (steps of 500hz)
 const int DATAINT=15000;//timing of data collection-not sure what this will be yet.
 int dataTimer;
+ int logTime;
 /*////needed if using sin wave
 float sinwave;
 float A;
@@ -42,7 +43,7 @@ float B;//offset
 ////declare functions
 
 float ratAPRead(int hz);
-void writeSD(float ratReadArray[100][2]);//this may need to be 1 dimensional....
+void writeSD(int logTime, int hz, float maxRatio);//just variables since not all same data type
 
 //file system objects
 SdFat sd;
@@ -85,14 +86,14 @@ while (sd.exists(fileName)) {  //cycle through files until number not found for 
   if (!file.open(fileName, O_WRONLY | O_CREAT | O_EXCL)) { // open file for printing
     Serial.println("File Failed to Open");
   }
-  file.printf("TimeStamp, data 1, data 2 \n");  // print header row not sure how I want to do this yet...timestamp frequency ratio?
+  file.printf("Timestamp, Frequency_Hz, Ratio  \n");  // print header row not sure how I want to do this yet...timestamp frequency ratio?
   Serial.printf("\nLogging to: %s \n",fileName);
 
   file.close();//everytime line is opened, have to close
   Serial.printf("Done \n");
 
   Particle.syncTime();//don't need time zone for unix
-  dataTimer=millis();
+  //dataTimer=millis();
   //sdTimer=millis();
 
   pinMode(PULSEPIN,OUTPUT);
@@ -120,12 +121,13 @@ void loop() {
 
   //sinwave=A* sin(2 * M_PI * v * t)+B; //for sin wave, but won't be able to get high enough frequencies
 
-if(i<100){//keep reading until array full
-  maxRatio=ratAPRead(hz);
-    ratReadArray[i][0]=hz;
-    ratReadArray[i][1]=maxRatio;//couldn't I just call function here?
-    Serial.printf("ratioMax at %i=%.2f\n",hz,maxRatio);//print max ratio at that freq, just to check get rid of this later
-    
+for(i=0;i<100;i++){//keep reading until array full
+logTime=(int)Time.now();//unix time at reading
+  maxRatio=ratAPRead(hz);//each iteration of this function takes 1 sec, so built in timer (100 sec for all)
+  writeSD(logTime,hz,maxRatio);//call SD card function
+    hz=hz+500;//increment frequency for next loop
+}
+Serial.printf("scan complete\n");
 
   //ratio=random(0,100);//just to stand in for real data for now
   //if ((millis()-sdTimer)>SDTIME){
@@ -138,6 +140,7 @@ if(i<100){//keep reading until array full
   
  }
  */
+/*
 if((millis()-dataTimer)>DATAINT){
   ratReadArray[0]=(int)Time.now();//function to get unix time (and change array)
   dataArray[1]=random(0,10);
@@ -146,6 +149,7 @@ if((millis()-dataTimer)>DATAINT){
   dataTimer=millis();
 
 }
+*/
 }
   
   
@@ -155,17 +159,17 @@ if((millis()-dataTimer)>DATAINT){
     Serial.print("x");
     file.printf("%u , %i \n",logTime,random(0,100));  //print timestamp and random number to file
     */
-  }
+  
   
   
 
   
 ///////function to write to SD Card in lines///////
-void writeSD(int dataArray[3]){//imput will be impedance array however formatted
+void writeSD(int logTime, int hz, float maxRatio){//use individual universal parameters which will change for each loop
   if (!file.open(fileName, O_WRONLY | O_AT_END)) { // open file for printing and append to end
     Serial.println("File Failed to Open");
   }
-  file.printf("%i,%i,%i\n",dataArray[0],dataArray[1],dataArray[2]);  // print header row
+  file.printf("%i,%i,%f\n",logTime,hz,maxRatio);  
   Serial.printf("\nLogging to: %s \n",fileName);
 
   file.close();//everytime line is opened, have to close
@@ -192,7 +196,7 @@ startRead=millis();
 
     if(ratio>ratioMax){
     ratioMax=ratio;
-    startRead++;
+   
 
   }
   }
