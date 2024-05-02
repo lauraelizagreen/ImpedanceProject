@@ -10,6 +10,9 @@
 //#include "Particle.h"
 #include <SPI.h>
 #include <SdFat.h>
+#include<Encoder.h>
+#include<math.h>
+
 ///data types for SD Card reader
 const int CS=D2;//to activate SD reader set low or SS (can be any digital pin)
 //const int STARTPIN=D9;//if want button to log
@@ -25,11 +28,13 @@ const int PLANTREADPIN=A1;
 const int AVSIG=127;//average signal applied to pulse pin 127 produces equal on off (square wave?)
 int i;//counter to fill array at all frequecies
 int hz;//start hz at 100 (like multipip range is 5-50,000 Hz) Adrian started with 500Hz
-float pulse;
+float pulse;//these are local variables in ratAPRead function now
 float plant;
-float ratio;
-float maxRatio;//output from read function
+//float ratio;
+//float maxRatio;//output from read function going directly into array
 float ratReadArray[100][2];//array will contain freq and max ratio for 100 freqs (steps of 500hz)
+float impedArray[3]; //to contain pulse, plant, ratio(maxRatio)
+
 const int DATAINT=15000;//timing of data collection-not sure what this will be yet.
 int dataTimer;
  int logTime;
@@ -43,7 +48,7 @@ float B;//offset
 ////declare functions
 
 float ratAPRead(int hz);
-void writeSD(int logTime, int hz, float maxRatio);//just variables since not all same data type
+void writeSD(int logTime, int hz, float impedArray[3]);//just variables since not all same data type
 
 //file system objects
 SdFat sd;
@@ -86,7 +91,7 @@ while (sd.exists(fileName)) {  //cycle through files until number not found for 
   if (!file.open(fileName, O_WRONLY | O_CREAT | O_EXCL)) { // open file for printing
     Serial.println("File Failed to Open");
   }
-  file.printf("Timestamp, Frequency_Hz, Ratio  \n");  // print header row not sure how I want to do this yet...timestamp frequency ratio?
+  file.printf("Timestamp, Frequency_Hz, Pulse, Plant, Ratio  \n");  // print header row not sure how I want to do this yet...timestamp frequency ratio?
   Serial.printf("\nLogging to: %s \n",fileName);
 
   file.close();//everytime line is opened, have to close
@@ -123,8 +128,11 @@ void loop() {
 
 for(i=0;i<100;i++){//keep reading until array full
 logTime=(int)Time.now();//unix time at reading
-  maxRatio=ratAPRead(hz);//each iteration of this function takes 1 sec, so built in timer (100 sec for all)
-  writeSD(logTime,hz,maxRatio);//call SD card function
+
+  impedArray[2]=ratAPRead(hz);//each iteration of this function takes 1 sec, so built in timer (100 sec for all)
+  impedArray[0]=pulse;
+  impedArray[1]=plant;
+  writeSD(logTime,hz,impedArray);//call SD card function
     hz=hz+500;//increment frequency for next loop
 }
 Serial.printf("scan complete\n");
@@ -165,11 +173,11 @@ if((millis()-dataTimer)>DATAINT){
 
   
 ///////function to write to SD Card in lines///////
-void writeSD(int logTime, int hz, float maxRatio){//use individual universal parameters which will change for each loop
+void writeSD(int logTime, int hz, float impedArray[3]){//use individual universal parameters which will change for each loop
   if (!file.open(fileName, O_WRONLY | O_AT_END)) { // open file for printing and append to end
     Serial.println("File Failed to Open");
   }
-  file.printf("%i,%i,%f\n",logTime,hz,maxRatio);  
+  file.printf("%i,%i,%0.2f,%0.2f,%0.2f\n",logTime,hz,impedArray[0],impedArray[1],impedArray[2]);  
   Serial.printf("\nLogging to: %s \n",fileName);
 
   file.close();//everytime line is opened, have to close
@@ -178,28 +186,29 @@ void writeSD(int logTime, int hz, float maxRatio){//use individual universal par
 }
 //function to measure max plant/pulse ratio at 100 frequencies and put into array to write to sd card 
 float ratAPRead(int hz) {
-  const int READTIME=1000;
+  const int READTIME=1000;//average over 1 sec
   unsigned int startRead;
   //int hz;
-  float pulse;
-  float plant;
+  //float pulse;
+  //float plant;
   float ratio;
   float ratioMax;//max ratio at every one second read
+  float functData[3];
   
 ratioMax=0;
 startRead=millis();
   while((millis()-startRead)<READTIME) {//read and calculate ratio over and over for 1 sec
     analogWrite(PULSEPIN,AVSIG,hz);
-    pulse=analogRead(PULSEREADPIN);
-    plant=analogRead(PLANTREADPIN);
+    pulse=analogRead(PULSEREADPIN);//pulse functData[0]
+    plant=analogRead(PLANTREADPIN);//plant functData[1]
     ratio=plant/pulse;
 
     if(ratio>ratioMax){
-    ratioMax=ratio;
+    ratioMax=ratio;//functData[2]
    
 
   }
   }
-  return ratioMax;
+  return ratioMax;//could whole function be returned with 3 data points?
 }
 

@@ -51,7 +51,7 @@ const int RADIOADDRESS = 0xC1;//my address
 
 
 const int TIMEZONE= -6;
-const unsigned int UPDATE=30000;//this needs to be same as BMEDataTimer
+const unsigned int UPDATE=30000;//this needs to be same as BMEDataTimer??
 
 //declare LoRa functions
 //void sendData(String name, float latitude, float longitude, int satelittes);//only recieving with this code will need this for other microcontroller?
