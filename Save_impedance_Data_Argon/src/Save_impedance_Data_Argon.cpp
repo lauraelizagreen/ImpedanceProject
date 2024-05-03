@@ -14,7 +14,7 @@
 #include<math.h>
 
 ///data types for SD Card reader
-const int CS=D2;//to activate SD reader set low or SS (can be any digital pin)
+const int CS=D5;//to activate SD reader set low or SS (can be any digital pin)
 //const int STARTPIN=D9;//if want button to log
 const uint SDTIME=15000;//every 15 sec
 const char FILE_BASE_NAME[]="Data";
