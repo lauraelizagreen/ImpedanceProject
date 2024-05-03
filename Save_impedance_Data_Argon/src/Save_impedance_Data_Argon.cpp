@@ -125,8 +125,8 @@ while (sd.exists(fileName)) {  //cycle through files until number not found for 
 void loop() {
 
   //sinwave=A* sin(2 * M_PI * v * t)+B; //for sin wave, but won't be able to get high enough frequencies
-
-for(i=0;i<100;i++){//keep reading until array full
+//if scan button clicked (=scan mode) else in manual encoder to Hz and click (other button) then write data = inputted data interval
+for(i=0;i<100;i++){//keep reading until array full -could just add to hz here
 logTime=(int)Time.now();//unix time at reading
 
   impedArray[2]=ratAPRead(hz);//each iteration of this function takes 1 sec, so built in timer (100 sec for all)
