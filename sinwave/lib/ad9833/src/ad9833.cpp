@@ -8,8 +8,8 @@ AD9833::AD9833(int _FSYNC, unsigned long _mclk) {
   controlRegister = 0x2000;   // Default control register : FREQ0, PHASE0, Sine
   fqRegister = 0x4000;        // Default frequency register is 0
   pRegister = 0xC000;         // Default phase register is 0
-  SPI.begin();                // Initialise the SPI BUS
-  SPI.setDataMode(SPI_MODE2); // Set SPI in mode2, this should be moved in
+  SPI1.begin();                // Initialise the SPI BUS
+  SPI1.setDataMode(SPI_MODE2); // Set SPI in mode2, this should be moved in
   // methods when SPI.transfer is called in case you
   // have multiple devices using the SPI bus
 }
@@ -18,9 +18,9 @@ void AD9833::writeData(int data) {
   // FSYNC pin must be pulled low when new data is received by AD9833
   digitalWrite(FSYNC, LOW);
   // Send the first 8 MSBs of data
-  SPI.transfer(highByte(data));
+  SPI1.transfer(highByte(data));
   // Send the last 8 LSBs of data
-  SPI.transfer(lowByte(data));
+  SPI1.transfer(lowByte(data));
   // Set the FSYNC pin to high then end SPI transaction
   digitalWrite(FSYNC, HIGH);
   // debugging

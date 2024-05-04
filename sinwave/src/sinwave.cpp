@@ -7,7 +7,6 @@
  */
 
 // Include Particle Device OS APIs
-#include "Particle.h"
 #include "AD9833.h"
 #include <SPI.h>
 #include <SdFat.h>
@@ -20,7 +19,7 @@ const int MASTER_CLOCK = 25000000;//Hz
 const int MODE_SINE = 0;//0=sin,1=triangle,2=square
 unsigned long frequency;//desired freq in hz
 ////for SD card reader
-const int CS=D6;//chip select to activate SD reader
+const int CS=A4;//chip select to activate SD reader
 const char FILE_BASE_NAME[]="Data";//character array for base file name that will be added to
 int fileNumber;//used to indicate which file written to
 const uint8_t BASE_NAME_SIZE=sizeof(FILE_BASE_NAME)-1;//defined as size of base name
@@ -32,7 +31,7 @@ float pulse;
 float plant;
 int i;//counter to fill array for max ratio
 ///arrays
-float ratReadArray[100][2];
+//float ratReadArray[100][2];
 float impedArray[3];
 
 const int DATAINT=15000;//data collection interval
@@ -54,7 +53,7 @@ void setup() {
   Serial.printf("Starting Serial Monitor...\n");
   delay(5000);
 //initalizing sin wave generator
-  frequency = 1000; // initial frequency 1K ohms for now
+  frequency = 500; // initial frequency 1K ohms for now
 
   sineGen.reset(1);           // Place ad9833 into reset
   Serial.printf("AD9833 in reset\n");
@@ -116,15 +115,16 @@ while (sd.exists(fileName)) {  //cycle through files until number not found for 
 
 void loop() {
   //if scan button clicked (=scan mode) else in manual encoder to Hz and click (other button) then write data = inputted data interval
-for(i=0;i<100;i++){//keep reading until array full -could just add to hz here
+for(i=0;i<200;i++){//keep reading until array full -could just add to hz here
 logTime=(int)Time.now();//unix time at reading
 
   impedArray[2]=ratAPRead(frequency);//call function here each iteration of this function takes 1 sec, so built in timer (100 sec for all)
   impedArray[0]=pulse;
   impedArray[1]=plant;
   writeSD(logTime,frequency,impedArray);//call SD card function
+   Serial.printf("%i,%u,%0.2f,%0.2f,%0.2f\n",logTime,frequency,impedArray[0],impedArray[1],impedArray[2]); 
     frequency=frequency+500;//increment frequency for next loop
-    sineGen.setFreq(frequency);//change frequency in sin wave generator
+    
 }
 Serial.printf("scan complete\n");
 
@@ -143,7 +143,7 @@ void writeSD(int logTime, unsigned long frequency, float impedArray[3]){//use in
 
 }
 //function to measure max plant/pulse ratio at 100 frequencies and put into array to write to sd card 
-float ratAPRead(unsigned long hz) {
+float ratAPRead(unsigned long frequency) {
   const int READTIME=1000;//average over 1 sec
   unsigned int startRead;
   //int hz;
@@ -151,8 +151,8 @@ float ratAPRead(unsigned long hz) {
   //float plant;
   float ratio;
   float ratioMax;//max ratio at every one second read
-  float functData[3];
-  
+  //float functData[3];
+sineGen.setFreq(frequency);//change frequency in sin wave generator 
 ratioMax=0;
 startRead=millis();
   while((millis()-startRead)<READTIME) {//read and calculate ratio over and over for 1 sec
