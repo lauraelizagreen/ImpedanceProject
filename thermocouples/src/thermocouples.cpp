@@ -17,10 +17,10 @@ float ambTemp;
 float deltaTemp;
 
 MCP9600 tempSensor;
-Thermocouple_Type type = TYPE_K; //can change type here
+Thermocouple_Type type = TYPE_T; //can change type here
 
 // Let Device OS manage the connection to the Particle Cloud
-SYSTEM_MODE(AUTOMATIC);
+SYSTEM_MODE(SEMI_AUTOMATIC);
 
 // Run the application and system concurrently in separate threads
 //SYSTEM_THREAD(ENABLED);
