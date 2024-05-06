@@ -11,8 +11,21 @@
 #include <SPI.h>
 #include <SdFat.h>
 #include <math.h>
+#include "IoTClassroom_CNM.h"
+#include <Encoder.h>
+#include "Adafruit_GFX.h"//order matters for OLED h files
+#include "Adafruit_SSD1306.h"
+#include <Adafruit_MQTT.h>
+#include "Adafruit_MQTT/Adafruit_MQTT_SPARK.h"
+#include "Adafruit_MQTT/Adafruit_MQTT.h"
+#include "credentials.h"//be sure to add to ignore file
 
 SYSTEM_MODE(SEMI_AUTOMATIC);
+
+TCPClient TheClient; 
+
+Adafruit_MQTT_SPARK mqtt(&TheClient,AIO_SERVER,AIO_SERVERPORT,AIO_USERNAME,AIO_KEY);
+Adafruit_MQTT_Publish pubFeedZDataRatio = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/ZDataRatio");
 /// for sin wave generator
 const int AD9833_FSYNC = D14;//will replace pulse pin for sin wave output
 const int MASTER_CLOCK = 25000000;//Hz
@@ -29,24 +42,44 @@ const int  PULSEREADPIN=A3;
 const int PLANTREADPIN=A1;
 float pulse;
 float plant;
+float manRatio;//for function return in manual mode
 int i;//counter to fill array for max ratio
 ///arrays
 //float ratReadArray[100][2];
 float impedArray[3];
+//encoder variables
+const int ENCPINA=D9;
+const int ENCPINB=D10;
+const int ENCSWITCH=A2;
+const int ENCGREEN=D5;
+const int ENCBLUE=D6;
+int dialPosition1;//encoder read first set to 0 intially when defined or could initialize in setup
+int dialPosition2;//encoder read second
+float manFreq;
+bool onOff;
+//OLED
+const int OLED_RESET=-1;
+const int XPOS=0; 
+const int YPOS=1;
+const int DELTAY=2;
 
 const int DATAINT=15000;//data collection interval
 int dataTimer;
 int logTime; //for unix time
+unsigned int lastTimeMeas;//for measurement interval and  publishing to Adafruit
 
 ////declare functions
-float ratAPRead(unsigned long frequency);
+float ratAPRead();
 void writeSD(int logTime, unsigned long frequency, float impedArray[3]);//only impedance variables in array since they're same data type
+void MQTT_connect();
+bool MQTT_ping();
 
 //declare objects
 SdFat sd;
 SdFile file;
-
-AD9833 sineGen(AD9833_FSYNC, MASTER_CLOCK);
+Encoder myEnc(ENCPINA,ENCPINB);
+Button encSwitch(ENCSWITCH);//false for internal pull-down (not pull-up)
+AD9833 sineGen(AD9833_FSYNC, MASTER_CLOCK);//sine wave generator
 
 void setup() {
   Serial.begin(9600);
@@ -100,12 +133,21 @@ while (sd.exists(fileName)) {  //cycle through files until number not found for 
   file.close();//everytime line is opened, have to close
   Serial.printf("Done \n");
 
+  //OLED initialization
+display.begin(SSD1306_SWITCHCAPVCC, 0x3C); //initialize with 12C address----not sure I understand this....??
+void setRotation(uint8_t rotation);//how to use this to flip?
+display.clearDisplay();   // clears the screen and buffer
+display.display();
+
   Particle.syncTime();//don't need time zone for unix
   //dataTimer=millis();
   //sdTimer=millis();
 
   pinMode(PULSEREADPIN,INPUT);
   pinMode(PLANTREADPIN, INPUT);
+  pinMode(ENCGREEN, OUTPUT);//lights on encoder switch
+  pinMode(ENCBLUE,OUTPUT);
+  onOff=true;//for encoder switch-start true since on is off (ground completes circuit)
 
   i=0;
 
@@ -114,20 +156,98 @@ while (sd.exists(fileName)) {  //cycle through files until number not found for 
 }
 
 void loop() {
+  MQTT_connect();
+  MQTT_ping();
+
+  //for manual mode/scan mode
+  if(encSwitch.isClicked()) {//using button heterofile with bool function isClicked
+    onOff=!onOff;//assigns onoff opposite of existing (toggles)
+    lastTimeMeas=millis();//sets measurement interval timer
+
+  }
+  //manual mode
+  digitalWrite(ENCGREEN,onOff);//low turns on (connects to ground to complete circuit)
+if(onOff==TRUE){
+//Serial.printf("onOff=%i\n",onOff);//un-comment to check
+  //display.clearDisplay();
+  display.setTextSize(2);//
+  display.setTextColor(WHITE);
+  display.setCursor(0,5);
+  display.printf("MANUAL MODE:\nUSE DIAL TO SET FREQUENCY");
+  //display.startscrollright(0x00, 0x0F);
+  display.display();
+
+  dialPosition2=myEnc.read();
+  if(dialPosition2>95){
+    myEnc.write(95);
+    dialPosition2=95;
+  }
+  if(dialPosition2<0){
+    myEnc.write(0);
+    dialPosition2=0;
+  }
+  manFreq=map(dialPosition2,0,95,100,100000);//convert from position to frequency
+    
+    if(dialPosition2!=dialPosition1) {//only prints if dial has been turned
+
+   dialPosition1=dialPosition2;//redefine to see furthur changes
+   sineGen.setFreq(manFreq);
+  
+Serial.printf("%f\n",manFreq);//print to serial monitor
+display.clearDisplay();//print frequency to OLED
+  display.setTextSize(2);
+  display.setTextColor(WHITE);
+  display.setCursor(0,5);
+  display.printf("%0.2f HZ",manFreq);
+  display.startscrollright(0x00, 0x0F);
+  display.display();
+  delay(3000);
+    }
+  Serial.printf("measuring");//print to serial monitor
+  display.clearDisplay();//print frequency to OLED
+  display.setTextSize(2);
+  display.setTextColor(WHITE);
+  display.setCursor(0,5);
+  display.printf("measuring");
+  display.startscrollright(0x00, 0x0F);
+  display.display();
+///every minute show ratio on OLED and publish to Adafruit
+
+  if((millis()-lastTimeMeas > 60000)) {//publishing (how often?)
+     logTime=(int)Time.now();//unix time at reading
+     manRatio=ratAPRead();//call function to measure and calculate ratio every (sec?)
+  
+  
+    if(mqtt.Update()) {
+       pubFeedZDataRatio.publish(manRatio);//publish max ratio
+      Serial.printf("Publishing %.2f at %i\n",maxRatio,manFreq);
+      lastTimeMeas=millis();  
+      } 
+      }
+}
+    
+  
+
+else{
+
+
+
   //if scan button clicked (=scan mode) else in manual encoder to Hz and click (other button) then write data = inputted data interval
 for(i=0;i<200;i++){//keep reading until array full -could just add to hz here
 logTime=(int)Time.now();//unix time at reading
 
-  impedArray[2]=ratAPRead(frequency);//call function here each iteration of this function takes 1 sec, so built in timer (100 sec for all)
+  impedArray[2]=ratAPRead();//call function here each iteration of this function takes 1 sec, so built in timer (100 sec for all)
   impedArray[0]=pulse;
   impedArray[1]=plant;
   writeSD(logTime,frequency,impedArray);//call SD card function
    Serial.printf("%i,%u,%0.2f,%0.2f,%0.2f\n",logTime,frequency,impedArray[0],impedArray[1],impedArray[2]); 
     frequency=frequency+500;//increment frequency for next loop
+    sineGen.setFreq(frequency);//change frequency in sin wave generator
     
 }
 Serial.printf("scan complete\n");
 
+}
 }
 
 ///////function to write to SD Card in lines///////
@@ -143,7 +263,7 @@ void writeSD(int logTime, unsigned long frequency, float impedArray[3]){//use in
 
 }
 //function to measure max plant/pulse ratio at 100 frequencies and put into array to write to sd card 
-float ratAPRead(unsigned long frequency) {
+float ratAPRead() {
   const int READTIME=1000;//average over 1 sec
   unsigned int startRead;
   //int hz;
@@ -152,7 +272,7 @@ float ratAPRead(unsigned long frequency) {
   float ratio;
   float ratioMax;//max ratio at every one second read
   //float functData[3];
-sineGen.setFreq(frequency);//change frequency in sin wave generator 
+ 
 ratioMax=0;
 startRead=millis();
   while((millis()-startRead)<READTIME) {//read and calculate ratio over and over for 1 sec
@@ -170,5 +290,41 @@ startRead=millis();
   }
   return ratioMax;//could whole function be returned with 3 data points?
 }
+
+void MQTT_connect() {//actually connects to server, if not connected stuck in loop
+  int8_t ret;//photon 2 thinks of integers as 32bits
+ 
+  // Return if already connected.
+  if (mqtt.connected()) {
+    return;
+  }
+ 
+  Serial.print("Connecting to MQTT... ");
+ 
+  while ((ret = mqtt.connect()) != 0) { // connect will return 0 for connected
+       Serial.printf("Error Code %s\n",mqtt.connectErrorString(ret));
+       Serial.printf("Retrying MQTT connection in 5 seconds...\n");
+       mqtt.disconnect();
+       delay(5000);  // wait 5 seconds and try again
+  }
+  Serial.printf("MQTT Connected!\n");
+}
+
+bool MQTT_ping() {//broker will disconnect if doesn't hear anything, just reminding broker still here so don't disconnect
+  static unsigned int last;
+  bool pingStatus;
+
+  if ((millis()-last)>120000) {
+      Serial.printf("Pinging MQTT \n");
+      pingStatus = mqtt.ping();
+      if(!pingStatus) {
+        Serial.printf("Disconnecting \n");
+        mqtt.disconnect();
+      }
+      last = millis();
+  }
+  return pingStatus;
+}
+
 
 
