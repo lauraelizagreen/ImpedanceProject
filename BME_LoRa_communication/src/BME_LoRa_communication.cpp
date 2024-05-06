@@ -1,5 +1,5 @@
 /* 
- * Project BME_LoRa_communication
+ * Project BME_LoRa_communication to send data from one BME/microcontroller to another that has SD card reader or wifi access
  * Author: Laura Green
  * Date: April 26, 2024
  * For comprehensive documentation and examples, please visit:
@@ -12,7 +12,7 @@
 #include "Adafruit_BME280.h"
 
 const int BMEADDRESS1=0x76;
-const int BMEADDRESS2=0x77;//not sure if this is second address yet
+const int BMEADDRESS2=0x77;//original address
 const int BMEDELAY=15000;//btw bme readings
 float tempC1;
 float tempC2;
@@ -36,7 +36,7 @@ char fileName[13];
 const int DATAINT=15000;//interval between data collection
 int BMEDataTimer;//when to collect
 ///declare function
-void writeSD(int timeStamp,BMEArray[6]);
+void writeSD(int timeStamp,float BMEArray[6]);
 
 //LoRa network constants-how do I know how to set this up outside of FUSE???
 const int RADIONETWORK = 7;    // range of 0-16
@@ -78,6 +78,7 @@ void setup() {
   Serial.begin(9600);
   waitFor(Serial.isConnected, 5000);
   delay(1000);
+  /*
 //for LoRa network
   Serial1.begin(115200);
   reyaxSetup(password);//call function for LoRa set up
@@ -115,7 +116,7 @@ while (sd.exists(fileName)) {  //cycle through files until number not found for 
   if (status==false) {//little bit fancier initialization
     Serial.printf("BME280 at address 0x%02X failed to start",BMEADDRESS1);
   }
-
+*/
   status=bme2.begin(BMEADDRESS2);//"bme"is just name of object in this function
   if (status==false) {//little bit fancier initialization
     Serial.printf("BME280 at address 0x%02X failed to start",BMEADDRESS2);
@@ -129,7 +130,7 @@ while (sd.exists(fileName)) {  //cycle through files until number not found for 
 
 
 void loop() {//will need to have variables for both BME's on Argon
-
+/*
 // listen for incoming lora messages 
   if (Serial1.available())  { // full incoming buffer: not sure how to do this part..// for FUSE data was:full incoming buffer: +RCV=203,50,35.08,9,-36,41 
 
@@ -156,20 +157,21 @@ void loop() {//will need to have variables for both BME's on Argon
 
 
   }
+  */
   if((millis()-BMEDataTimer)>BMEDELAY){//or use instead of timer object  
   timeStamp=(int)Time.now();//function to get unix time
   //for(i=0;i<9;i++){}
   //BMEArray[i] =bme1.readTemperature();//deg C
-  BMEArray[0]=bme1.readTemperature();//deg C
-  BMEArray[1] = bme1.readHumidity();//%RH
-  BMEArray[2] =bme1.readPressure();//pascals
+  //BMEArray[0]=bme1.readTemperature();//deg C
+ // BMEArray[1] = bme1.readHumidity();//%RH
+ // BMEArray[2] =bme1.readPressure();//pascals
   BMEArray[3] =bme2.readTemperature();//deg C
   BMEArray[4] = bme2.readHumidity();//%RH
   BMEArray[5] =bme2.readPressure();//pascals
-  Serial.printf("time=%i\ntempC1=%0.2f\nhumidRH1=%0.2f\npressPA1=%0.2f\n",timeStamp,BMEArray[0],BMEArray[1],BMEArray[2]);
+ // Serial.printf("time=%i\ntempC1=%0.2f\nhumidRH1=%0.2f\npressPA1=%0.2f\n",timeStamp,BMEArray[0],BMEArray[1],BMEArray[2]);
  Serial.printf("time=%i\ntempC1=%0.2f\nhumidRH1=%0.2f\npressPA1=%0.2f\n",timeStamp,BMEArray[3],BMEArray[4],BMEArray[5]);
   
-  writeSD(timeStamp,BMEArray);//call function with array as argument
+ // writeSD(timeStamp,BMEArray);//call function with array as argument
   BMEDataTimer=millis();
 
 }
@@ -177,7 +179,7 @@ void loop() {//will need to have variables for both BME's on Argon
 }
 
 ///////function to write to SD Card in lines///////
-void writeSD(int timeStamp,BMEArray[6]){//imput will be array of data from all BME's
+void writeSD(int timeStamp,float BMEArray[6]){//imput will be array of data from all BME's
   if (!file.open(fileName, O_WRONLY | O_AT_END)) { // open file for printing and append to end
     Serial.println("File Failed to Open");
   }

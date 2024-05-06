@@ -56,23 +56,23 @@ void setup() {
   frequency = 500; // initial frequency 1K ohms for now
 
   sineGen.reset(1);           // Place ad9833 into reset
-  Serial.printf("AD9833 in reset\n");
+  //Serial.printf("AD9833 in reset\n");
   sineGen.setFreq(frequency); // Set initial frequency 
-  Serial.printf("AD9833 frequency set\n");
+  //Serial.printf("AD9833 frequency set\n");
   sineGen.setPhase(0);        // Set initial phase offset to 0
-  Serial.printf("AD9833 phase set\n");
+  //Serial.printf("AD9833 phase set\n");
   sineGen.setFPRegister(1);
-  Serial.printf("AD9833 FP reg set to 1\n");
+  //Serial.printf("AD9833 FP reg set to 1\n");
   sineGen.setFreq(frequency);
-  Serial.printf("AD9833 frequency set\n");
+  //Serial.printf("AD9833 frequency set\n");
   sineGen.setPhase(0);
-  Serial.printf("AD9833 phase set\n");
+  //Serial.printf("AD9833 phase set\n");
   sineGen.setFPRegister(0);
-  Serial.printf("AD9833 FP reg set to 0\n");
+  //Serial.printf("AD9833 FP reg set to 0\n");
   sineGen.mode(MODE_SINE);    // Set output mode to sine wave
-  Serial.printf("AD9833 mode set to sine wave\n");
+  //Serial.printf("AD9833 mode set to sine wave\n");
   sineGen.reset(0);           // Take ad9833 out of reset
-  Serial.printf("AD9833 out of reset\n");
+  //Serial.printf("AD9833 out of reset\n");
 
   //initializing SD Card Reader
 
