@@ -30,7 +30,7 @@ Adafruit_MQTT_Publish pubFeedZDataRatio = Adafruit_MQTT_Publish(&mqtt, AIO_USERN
 const int AD9833_FSYNC = D14;//will replace pulse pin for sin wave output
 const int MASTER_CLOCK = 25000000;//Hz
 const int MODE_SINE = 0;//0=sin,1=triangle,2=square
-unsigned long frequency;//desired freq in hz
+unsigned int frequency;//desired freq in hz
 ////for SD card reader
 const int CS=A4;//chip select to activate SD reader
 const char FILE_BASE_NAME[]="Data";//character array for base file name that will be added to
@@ -40,13 +40,13 @@ char fileName[13];//to contain file name, number , .csv + 1 to mark end of array
 ///for "impedance"
 const int  PULSEREADPIN=A3;
 const int PLANTREADPIN=A1;
-float pulse;
+float pulse;//make these global so they can be called in code
 float plant;
 float manRatio;//for function return in manual mode
 int i;//counter to fill array for max ratio
 ///arrays
-//float ratReadArray[100][2];
-float impedArray[3];
+float ratReadArray[200][2];//use to determine max and ratio at 0.5 of max
+float impedArray[3];//for printing to SD Card
 //encoder variables
 const int ENCPINA=D9;
 const int ENCPINB=D10;
@@ -57,8 +57,9 @@ int dialPosition1;//encoder read first set to 0 intially when defined or could i
 int dialPosition2;//encoder read second
 float manFreq;
 bool onOff;
-//OLED
+//OLED constants
 const int OLED_RESET=-1;
+const int NUMFLAKES=10;
 const int XPOS=0; 
 const int YPOS=1;
 const int DELTAY=2;
@@ -69,9 +70,9 @@ int logTime; //for unix time
 unsigned int lastTimeMeas;//for measurement interval and  publishing to Adafruit
 
 ////declare functions
-float ratAPRead();
-void writeSD(int logTime, unsigned long frequency, float impedArray[3]);//only impedance variables in array since they're same data type
-void MQTT_connect();
+float ratAPRead();//function to read pulse, plant and calculate max ratio every second
+void writeSD(int logTime, unsigned int frequency, float impedArray[3]);//only impedance variables in array since they're same data type
+void MQTT_connect();//funtions to connect and maintain connection to Adafruit io
 bool MQTT_ping();
 
 //declare objects
@@ -85,9 +86,15 @@ void setup() {
   Serial.begin(9600);
   Serial.printf("Starting Serial Monitor...\n");
   delay(5000);
-//initalizing sin wave generator
-  frequency = 500; // initial frequency 1K ohms for now
 
+   //OLED initialization
+display.begin(SSD1306_SWITCHCAPVCC, 0x3C); //initialize with 12C address
+//void setRotation(uint8_t rotation);//how to use this to flip?
+display.clearDisplay();   // clears the screen and buffer
+//display.display();
+
+//initalizing sin wave generator
+  frequency = 500; // initial frequency for sweep
   sineGen.reset(1);           // Place ad9833 into reset
   //Serial.printf("AD9833 in reset\n");
   sineGen.setFreq(frequency); // Set initial frequency 
@@ -96,7 +103,7 @@ void setup() {
   //Serial.printf("AD9833 phase set\n");
   sineGen.setFPRegister(1);
   //Serial.printf("AD9833 FP reg set to 1\n");
-  sineGen.setFreq(frequency);
+  sineGen.setFreq(frequency);//not sure if this has to be set again.....
   //Serial.printf("AD9833 frequency set\n");
   sineGen.setPhase(0);
   //Serial.printf("AD9833 phase set\n");
@@ -133,12 +140,7 @@ while (sd.exists(fileName)) {  //cycle through files until number not found for 
   file.close();//everytime line is opened, have to close
   Serial.printf("Done \n");
 
-  //OLED initialization
-display.begin(SSD1306_SWITCHCAPVCC, 0x3C); //initialize with 12C address----not sure I understand this....??
-void setRotation(uint8_t rotation);//how to use this to flip?
-display.clearDisplay();   // clears the screen and buffer
-display.display();
-
+ 
   Particle.syncTime();//don't need time zone for unix
   //dataTimer=millis();
   //sdTimer=millis();
@@ -168,7 +170,7 @@ void loop() {
   //manual mode
   digitalWrite(ENCGREEN,onOff);//low turns on (connects to ground to complete circuit)
 if(onOff==TRUE){
-//Serial.printf("onOff=%i\n",onOff);//un-comment to check
+Serial.printf("onOff=%i\n",onOff);//un-comment to check
   //display.clearDisplay();
   display.setTextSize(2);//
   display.setTextColor(WHITE);
@@ -220,7 +222,7 @@ display.clearDisplay();//print frequency to OLED
   
     if(mqtt.Update()) {
        pubFeedZDataRatio.publish(manRatio);//publish max ratio
-      Serial.printf("Publishing %.2f at %i\n",maxRatio,manFreq);
+      Serial.printf("Publishing %.2f at %i\n",manRatio,manFreq);
       lastTimeMeas=millis();  
       } 
       }
@@ -251,7 +253,7 @@ Serial.printf("scan complete\n");
 }
 
 ///////function to write to SD Card in lines///////
-void writeSD(int logTime, unsigned long frequency, float impedArray[3]){//use individual universal parameters which will change for each loop
+void writeSD(int logTime, unsigned int frequency, float impedArray[3]){//use individual universal parameters which will change for each loop
   if (!file.open(fileName, O_WRONLY | O_AT_END)) { // open file for printing and append to end
     Serial.println("File Failed to Open");
   }
