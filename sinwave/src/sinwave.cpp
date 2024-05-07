@@ -78,7 +78,7 @@ bool MQTT_ping();
 SdFat sd;
 SdFile file;
 Encoder myEnc(ENCPINA,ENCPINB);
-Button encSwitch(ENCSWITCH);//false for internal pull-down (not pull-up)
+Button encSwitch(ENCSWITCH,FALSE);//false for internal pull-down (not pull-up)
 AD9833 sineGen(AD9833_FSYNC, MASTER_CLOCK);//sine wave generator
 
 void setup() {
@@ -165,19 +165,21 @@ void loop() {
   //for manual mode/scan mode
   if(encSwitch.isClicked()) {//using button heterofile with bool function isClicked make this an interrupt funciton?
     onOff=!onOff;//assigns onoff opposite of existing (toggles)
-    lastTimeMeas=millis();//initially sets measurement interval timer
-    manFreq=frequency;
-  }
+   
   //manual mode
-  digitalWrite(ENCGREEN,onOff);//low turns on/high off, so blue in manual mode(connects to ground to complete circuit)
-digitalWrite(ENCBLUE,!onOff);
-if(onOff==TRUE){
+  
+if(onOff==TRUE){//try arranging these here:
+  digitalWrite(ENCGREEN,HIGH);//low turns on/high off, so blue in manual mode(connects to ground to complete circuit)
+lastTimeMeas=millis();//initially sets measurement interval timer
+manFreq=frequency;
+  
 //Serial.printf("onOff=%i\n",onOff);//un-comment to check
 //delay(1000);
 Serial.printf("manual mode: enter frequency with dial\n");
 delay(1000);
 Serial.printf("%i Hz\n",manFreq);
 delay(1000);
+
 /*
   //display.clearDisplay();
   display.setTextSize(2);//
@@ -230,7 +232,7 @@ display.clearDisplay();//print frequency to OLED
   */
 ///every minute show ratio on OLED and publish to Adafruit
 
-
+//could enter measurement interval on key pad?
   if((millis()-lastTimeMeas > 60000)) {//publishing (how often?)
   Serial.printf("measuring\n");//print to serial monitor
   delay(1000);
@@ -254,7 +256,8 @@ display.clearDisplay();//print frequency to OLED
 else{
 
 
-
+digitalWrite(ENCBLUE,HIGH);
+Serial.Printf("Scan mode");
   //if scan button clicked (=scan mode) else in manual encoder to Hz and click (other button) then write data = inputted data interval
 for(i=0;i<200;i++){//keep reading until array full -could just add to hz here
 logTime=(int)Time.now();//unix time at reading
