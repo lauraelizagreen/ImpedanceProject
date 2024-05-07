@@ -55,11 +55,10 @@ const int ENCGREEN=D5;
 const int ENCBLUE=D6;
 int dialPosition1;//encoder read first set to 0 intially when defined or could initialize in setup
 int dialPosition2;//encoder read second
-float manFreq;
+int manFreq;
 bool onOff;
 //OLED constants
 const int OLED_RESET=-1;
-const int NUMFLAKES=10;
 const int XPOS=0; 
 const int YPOS=1;
 const int DELTAY=2;
@@ -86,13 +85,13 @@ void setup() {
   Serial.begin(9600);
   Serial.printf("Starting Serial Monitor...\n");
   delay(5000);
-
+/*
    //OLED initialization
 display.begin(SSD1306_SWITCHCAPVCC, 0x3C); //initialize with 12C address
 //void setRotation(uint8_t rotation);//how to use this to flip?
 display.clearDisplay();   // clears the screen and buffer
 //display.display();
-
+*/
 //initalizing sin wave generator
   frequency = 500; // initial frequency for sweep
   sineGen.reset(1);           // Place ad9833 into reset
@@ -150,7 +149,7 @@ while (sd.exists(fileName)) {  //cycle through files until number not found for 
   pinMode(ENCGREEN, OUTPUT);//lights on encoder switch
   pinMode(ENCBLUE,OUTPUT);
   onOff=true;//for encoder switch-start true since on is off (ground completes circuit)
-
+//will be manual mode
   i=0;
 
 
@@ -158,19 +157,28 @@ while (sd.exists(fileName)) {  //cycle through files until number not found for 
 }
 
 void loop() {
+  /*
   MQTT_connect();
   MQTT_ping();
+  */
 
   //for manual mode/scan mode
-  if(encSwitch.isClicked()) {//using button heterofile with bool function isClicked
+  if(encSwitch.isClicked()) {//using button heterofile with bool function isClicked make this an interrupt funciton?
     onOff=!onOff;//assigns onoff opposite of existing (toggles)
-    lastTimeMeas=millis();//sets measurement interval timer
-
+    lastTimeMeas=millis();//initially sets measurement interval timer
+    manFreq=frequency;
   }
   //manual mode
-  digitalWrite(ENCGREEN,onOff);//low turns on (connects to ground to complete circuit)
+  digitalWrite(ENCGREEN,onOff);//low turns on/high off, so blue in manual mode(connects to ground to complete circuit)
+digitalWrite(ENCBLUE,!onOff);
 if(onOff==TRUE){
-Serial.printf("onOff=%i\n",onOff);//un-comment to check
+//Serial.printf("onOff=%i\n",onOff);//un-comment to check
+//delay(1000);
+Serial.printf("manual mode: enter frequency with dial\n");
+delay(1000);
+Serial.printf("%i Hz\n",manFreq);
+delay(1000);
+/*
   //display.clearDisplay();
   display.setTextSize(2);//
   display.setTextColor(WHITE);
@@ -178,6 +186,7 @@ Serial.printf("onOff=%i\n",onOff);//un-comment to check
   display.printf("MANUAL MODE:\nUSE DIAL TO SET FREQUENCY");
   //display.startscrollright(0x00, 0x0F);
   display.display();
+  */
 
   dialPosition2=myEnc.read();
   if(dialPosition2>95){
@@ -188,14 +197,17 @@ Serial.printf("onOff=%i\n",onOff);//un-comment to check
     myEnc.write(0);
     dialPosition2=0;
   }
-  manFreq=map(dialPosition2,0,95,100,100000);//convert from position to frequency
+  
     
     if(dialPosition2!=dialPosition1) {//only prints if dial has been turned
 
    dialPosition1=dialPosition2;//redefine to see furthur changes
+   manFreq=map(dialPosition1,0,95,100,100000);//convert from position to frequency
    sineGen.setFreq(manFreq);
   
-Serial.printf("%f\n",manFreq);//print to serial monitor
+Serial.printf("%i Hz\n",manFreq);//print to serial monitor
+delay(1000);
+/*
 display.clearDisplay();//print frequency to OLED
   display.setTextSize(2);
   display.setTextColor(WHITE);
@@ -204,8 +216,10 @@ display.clearDisplay();//print frequency to OLED
   display.startscrollright(0x00, 0x0F);
   display.display();
   delay(3000);
+  */
     }
-  Serial.printf("measuring");//print to serial monitor
+  
+  /*
   display.clearDisplay();//print frequency to OLED
   display.setTextSize(2);
   display.setTextColor(WHITE);
@@ -213,19 +227,26 @@ display.clearDisplay();//print frequency to OLED
   display.printf("measuring");
   display.startscrollright(0x00, 0x0F);
   display.display();
+  */
 ///every minute show ratio on OLED and publish to Adafruit
 
+
   if((millis()-lastTimeMeas > 60000)) {//publishing (how often?)
+  Serial.printf("measuring\n");//print to serial monitor
+  delay(1000);
      logTime=(int)Time.now();//unix time at reading
      manRatio=ratAPRead();//call function to measure and calculate ratio every (sec?)
-  
-  
+  Serial.printf("%i Z magnitude is %0.2f\n",logTime,manRatio);
+  /*
     if(mqtt.Update()) {
        pubFeedZDataRatio.publish(manRatio);//publish max ratio
       Serial.printf("Publishing %.2f at %i\n",manRatio,manFreq);
-      lastTimeMeas=millis();  
+       
       } 
+      */
+     lastTimeMeas=millis();
       }
+      
 }
     
   
