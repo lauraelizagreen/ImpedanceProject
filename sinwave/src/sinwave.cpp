@@ -50,13 +50,13 @@ float impedArray[3];//for printing to SD Card
 //encoder variables
 const int ENCPINA=D9;
 const int ENCPINB=D10;
-const int ENCSWITCH=A2;
+const int ENCSWITCH=D4;//for manual/scan mode
 const int ENCGREEN=D5;
 const int ENCBLUE=D6;
 int dialPosition1;//encoder read first set to 0 intially when defined or could initialize in setup
 int dialPosition2;//encoder read second
 int manFreq;
-bool onOff;
+bool onOff;//for enc button click
 //OLED constants
 const int OLED_RESET=-1;
 const int XPOS=0; 
@@ -73,12 +73,13 @@ float ratAPRead();//function to read pulse, plant and calculate max ratio every 
 void writeSD(int logTime, unsigned int frequency, float impedArray[3]);//only impedance variables in array since they're same data type
 void MQTT_connect();//funtions to connect and maintain connection to Adafruit io
 bool MQTT_ping();
+void encButtonClick();//for interrupt
 
 //declare objects
 SdFat sd;
 SdFile file;
 Encoder myEnc(ENCPINA,ENCPINB);
-Button encSwitch(ENCSWITCH,FALSE);//false for internal pull-down (not pull-up)
+//Button encSwitch(ENCSWITCH,FALSE);//false for internal pull-down (not pull-up) not needed as object if in interupt function???
 AD9833 sineGen(AD9833_FSYNC, MASTER_CLOCK);//sine wave generator
 
 void setup() {
@@ -148,8 +149,11 @@ while (sd.exists(fileName)) {  //cycle through files until number not found for 
   pinMode(PLANTREADPIN, INPUT);
   pinMode(ENCGREEN, OUTPUT);//lights on encoder switch
   pinMode(ENCBLUE,OUTPUT);
-  onOff=true;//for encoder switch-start true since on is off (ground completes circuit)
-//will be manual mode
+  onOff=true;//for encoder switch-start true since on is off (ground completes circuit)start in manual mode
+  manFreq=500;
+  pinMode(ENCSWITCH, INPUT_PULLDOWN); //should it be INPUT_PULLDOWN?
+  attachInterrupt(ENCSWITCH,encButtonClick,CHANGE);//interupt for when mode button is clicked
+//onOff true will be manual mode
   i=0;
 
 
@@ -163,21 +167,25 @@ void loop() {
   */
 
   //for manual mode/scan mode
+  /*
   if(encSwitch.isClicked()) {//using button heterofile with bool function isClicked make this an interrupt funciton?
     onOff=!onOff;//assigns onoff opposite of existing (toggles)
-   
+    lastTimeMeas=millis();//initially sets measurement interval timer
+  } 
+  */
   //manual mode
   
 if(onOff==TRUE){//try arranging these here:
-  digitalWrite(ENCGREEN,HIGH);//low turns on/high off, so blue in manual mode(connects to ground to complete circuit)
-lastTimeMeas=millis();//initially sets measurement interval timer
-manFreq=frequency;
+digitalWrite(ENCBLUE,HIGH);
+digitalWrite(ENCGREEN,LOW);//low turns on/high off, so blue in manual mode(connects to ground to complete circuit)
+
+
   
 //Serial.printf("onOff=%i\n",onOff);//un-comment to check
 //delay(1000);
 Serial.printf("manual mode: enter frequency with dial\n");
 delay(1000);
-Serial.printf("%i Hz\n",manFreq);
+Serial.printf("%i Hz\n",manFreq);//initial freq
 delay(1000);
 
 /*
@@ -191,6 +199,7 @@ delay(1000);
   */
 
   dialPosition2=myEnc.read();
+  
   if(dialPosition2>95){
     myEnc.write(95);
     dialPosition2=95;
@@ -200,12 +209,12 @@ delay(1000);
     dialPosition2=0;
   }
   
+   if(dialPosition2!=dialPosition1) {//only prints if dial has been turned 
     
-    if(dialPosition2!=dialPosition1) {//only prints if dial has been turned
 
    dialPosition1=dialPosition2;//redefine to see furthur changes
-   manFreq=map(dialPosition1,0,95,100,100000);//convert from position to frequency
-   sineGen.setFreq(manFreq);
+   manFreq=map(dialPosition1,0,95,100,100000);//convert from dial position to frequency
+   sineGen.setFreq(manFreq);//change sin wave freq
   
 Serial.printf("%i Hz\n",manFreq);//print to serial monitor
 delay(1000);
@@ -233,7 +242,7 @@ display.clearDisplay();//print frequency to OLED
 ///every minute show ratio on OLED and publish to Adafruit
 
 //could enter measurement interval on key pad?
-  if((millis()-lastTimeMeas > 60000)) {//publishing (how often?)
+  if((millis()-lastTimeMeas > 10000)) {//publishing (how often?)
   Serial.printf("measuring\n");//print to serial monitor
   delay(1000);
      logTime=(int)Time.now();//unix time at reading
@@ -255,9 +264,10 @@ display.clearDisplay();//print frequency to OLED
 
 else{
 
-
-digitalWrite(ENCBLUE,HIGH);
-Serial.Printf("Scan mode");
+digitalWrite(ENCGREEN,HIGH);
+digitalWrite(ENCBLUE,LOW);
+Serial.printf("Scan mode");
+frequency=500;
   //if scan button clicked (=scan mode) else in manual encoder to Hz and click (other button) then write data = inputted data interval
 for(i=0;i<200;i++){//keep reading until array full -could just add to hz here
 logTime=(int)Time.now();//unix time at reading
@@ -272,6 +282,7 @@ logTime=(int)Time.now();//unix time at reading
     
 }
 Serial.printf("scan complete\n");
+onOff=TRUE;//return to manual mode
 
 }
 }
@@ -350,6 +361,12 @@ bool MQTT_ping() {//broker will disconnect if doesn't hear anything, just remind
       last = millis();
   }
   return pingStatus;
+}
+
+////super short function for button press (interupt)
+void encButtonClick(){
+onOff=!onOff;
+lastTimeMeas=millis();//initially sets measurement interval timer
 }
 
 
