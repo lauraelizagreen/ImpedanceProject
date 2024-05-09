@@ -71,6 +71,7 @@ unsigned int lastTimeMeas;//for measurement interval and  publishing to Adafruit
 ////declare functions
 float ratAPRead();//function to read pulse, plant and calculate max ratio every second
 void writeSD(int logTime, unsigned int frequency, float impedArray[3]);//only impedance variables in array since they're same data type
+void nextSDFile();
 void MQTT_connect();//funtions to connect and maintain connection to Adafruit io
 bool MQTT_ping();
 void encButtonClick();//for interrupt
@@ -79,7 +80,7 @@ void encButtonClick();//for interrupt
 SdFat sd;
 SdFile file;
 Encoder myEnc(ENCPINA,ENCPINB);
-//Button encSwitch(ENCSWITCH,FALSE);//false for internal pull-down (not pull-up) not needed as object if in interupt function???
+Button encSwitch(ENCSWITCH,FALSE);//false for internal pull-down (not pull-up) not needed as object if in interupt function???
 AD9833 sineGen(AD9833_FSYNC, MASTER_CLOCK);//sine wave generator
 
 void setup() {
@@ -103,7 +104,7 @@ display.clearDisplay();   // clears the screen and buffer
   //Serial.printf("AD9833 phase set\n");
   sineGen.setFPRegister(1);
   //Serial.printf("AD9833 FP reg set to 1\n");
-  sineGen.setFreq(frequency);//not sure if this has to be set again.....
+  sineGen.setFreq(frequency);//not sure why this has to be set again.....
   //Serial.printf("AD9833 frequency set\n");
   sineGen.setPhase(0);
   //Serial.printf("AD9833 phase set\n");
@@ -282,6 +283,7 @@ logTime=(int)Time.now();//unix time at reading
     
 }
 Serial.printf("scan complete\n");
+nextSDFile();
 onOff=TRUE;//return to manual mode
 
 }
@@ -298,6 +300,21 @@ void writeSD(int logTime, unsigned int frequency, float impedArray[3]){//use ind
   file.close();//everytime line is opened, have to close
   Serial.printf("Done \n");
 
+}
+void nextSDFile(){//function to move to next file 
+while (sd.exists(fileName)) {  //cycle through files until number not found for unwritten file
+    fileNumber++;
+    sprintf(fileName,"%s%02i.csv",FILE_BASE_NAME,fileNumber); //create numbered filename, (sprint prints to file that is 1st argument)
+    Serial.printf("Filename is %s\n",fileName);//print to serial monitor
+  }
+  if (!file.open(fileName, O_WRONLY | O_CREAT | O_EXCL)) { // open file for printing
+    Serial.println("File Failed to Open");
+  }
+  file.printf("Timestamp, Frequency_Hz, Pulse, Plant, Ratio  \n");  // print header row not sure how I want to do this yet...timestamp frequency ratio?
+  Serial.printf("\nLogging to: %s \n",fileName);
+
+  file.close();//everytime line is opened, have to close
+  Serial.printf("Done \n");
 }
 //function to measure max plant/pulse ratio at 100 frequencies and put into array to write to sd card 
 float ratAPRead() {
@@ -364,10 +381,11 @@ bool MQTT_ping() {//broker will disconnect if doesn't hear anything, just remind
 }
 
 ////super short function for button press (interupt)
-void encButtonClick(){
+void encButtonClick(){  
 onOff=!onOff;
 lastTimeMeas=millis();//initially sets measurement interval timer
 }
+
 
 
 
