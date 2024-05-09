@@ -82,18 +82,19 @@ SdFile file;
 Encoder myEnc(ENCPINA,ENCPINB);
 Button encSwitch(ENCSWITCH,FALSE);//false for internal pull-down (not pull-up) not needed as object if in interupt function???
 AD9833 sineGen(AD9833_FSYNC, MASTER_CLOCK);//sine wave generator
+Adafruit_SSD1306 display(OLED_RESET);
 
 void setup() {
   Serial.begin(9600);
   Serial.printf("Starting Serial Monitor...\n");
   delay(5000);
-/*
+
    //OLED initialization
 display.begin(SSD1306_SWITCHCAPVCC, 0x3C); //initialize with 12C address
 //void setRotation(uint8_t rotation);//how to use this to flip?
 display.clearDisplay();   // clears the screen and buffer
 //display.display();
-*/
+
 //initalizing sin wave generator
   frequency = 500; // initial frequency for sweep
   sineGen.reset(1);           // Place ad9833 into reset
@@ -162,10 +163,10 @@ while (sd.exists(fileName)) {  //cycle through files until number not found for 
 }
 
 void loop() {
-  /*
+  
   MQTT_connect();
   MQTT_ping();
-  */
+  
 
   //for manual mode/scan mode
   /*
@@ -189,15 +190,20 @@ delay(1000);
 Serial.printf("%i Hz\n",manFreq);//initial freq
 delay(1000);
 
-/*
+
   //display.clearDisplay();
   display.setTextSize(2);//
   display.setTextColor(WHITE);
   display.setCursor(0,5);
   display.printf("MANUAL MODE:\nUSE DIAL TO SET FREQUENCY");
-  //display.startscrollright(0x00, 0x0F);
+  display.startscrollright(0x00, 0x0F);
   display.display();
-  */
+  delay(1000);
+  display.clearDisplay();
+  display.display();
+  display.printf("%i Hz\n",manFreq);
+  display.display();
+  
 
   dialPosition2=myEnc.read();
   
@@ -219,27 +225,19 @@ delay(1000);
   
 Serial.printf("%i Hz\n",manFreq);//print to serial monitor
 delay(1000);
-/*
+
 display.clearDisplay();//print frequency to OLED
   display.setTextSize(2);
   display.setTextColor(WHITE);
   display.setCursor(0,5);
   display.printf("%0.2f HZ",manFreq);
-  display.startscrollright(0x00, 0x0F);
+  //display.startscrollright(0x00, 0x0F);
   display.display();
   delay(3000);
-  */
+  
     }
   
-  /*
-  display.clearDisplay();//print frequency to OLED
-  display.setTextSize(2);
-  display.setTextColor(WHITE);
-  display.setCursor(0,5);
-  display.printf("measuring");
-  display.startscrollright(0x00, 0x0F);
-  display.display();
-  */
+  
 ///every minute show ratio on OLED and publish to Adafruit
 
 //could enter measurement interval on key pad?
@@ -249,13 +247,22 @@ display.clearDisplay();//print frequency to OLED
      logTime=(int)Time.now();//unix time at reading
      manRatio=ratAPRead();//call function to measure and calculate ratio every (sec?)
   Serial.printf("%i Z magnitude is %0.2f\n",logTime,manRatio);
-  /*
+  
+  display.clearDisplay();//print frequency to OLED
+  display.setTextSize(2);
+  display.setTextColor(WHITE);
+  display.setCursor(0,5);
+  display.printf("measuring");
+  display.startscrollright(0x00, 0x0F);
+  display.display();
+  
+  
     if(mqtt.Update()) {
        pubFeedZDataRatio.publish(manRatio);//publish max ratio
       Serial.printf("Publishing %.2f at %i\n",manRatio,manFreq);
        
       } 
-      */
+      
      lastTimeMeas=millis();
       }
       
@@ -268,6 +275,14 @@ else{
 digitalWrite(ENCGREEN,HIGH);
 digitalWrite(ENCBLUE,LOW);
 Serial.printf("Scan mode");
+display.clearDisplay();//print frequency to OLED
+  display.setTextSize(2);
+  display.setTextColor(WHITE);
+  display.setCursor(0,5);
+  display.printf("SCAN MODE");
+  display.startscrollright(0x00, 0x0F);
+  display.display();
+  
 frequency=500;
   //if scan button clicked (=scan mode) else in manual encoder to Hz and click (other button) then write data = inputted data interval
 for(i=0;i<200;i++){//keep reading until array full -could just add to hz here
@@ -278,11 +293,25 @@ logTime=(int)Time.now();//unix time at reading
   impedArray[1]=plant;
   writeSD(logTime,frequency,impedArray);//call SD card function
    Serial.printf("%i,%u,%0.2f,%0.2f,%0.2f\n",logTime,frequency,impedArray[0],impedArray[1],impedArray[2]); 
+   display.clearDisplay();//print frequency to OLED
+  display.setTextSize(2);
+  display.setTextColor(WHITE);
+  display.setCursor(0,5);
+  display.printf("%i,%u,%0.2f,%0.2f,%0.2f\n",logTime,frequency,impedArray[0],impedArray[1],impedArray[2]);
+  display.startscrollright(0x00, 0x0F);
+  display.display();
     frequency=frequency+500;//increment frequency for next loop
     sineGen.setFreq(frequency);//change frequency in sin wave generator
     
 }
 Serial.printf("scan complete\n");
+display.clearDisplay();//print frequency to OLED
+  display.setTextSize(2);
+  display.setTextColor(WHITE);
+  display.setCursor(0,5);
+  display.printf("SCAN COMPLETE");
+  display.startscrollright(0x00, 0x0F);
+  display.display();
 nextSDFile();//call function to move to next file
 onOff=TRUE;//return to manual mode
 
