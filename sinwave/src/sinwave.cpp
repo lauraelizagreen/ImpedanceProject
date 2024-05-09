@@ -152,7 +152,7 @@ while (sd.exists(fileName)) {  //cycle through files until number not found for 
   pinMode(ENCBLUE,OUTPUT);
   onOff=true;//for encoder switch-start true since on is off (ground completes circuit)start in manual mode
   manFreq=500;
-  pinMode(ENCSWITCH, INPUT_PULLDOWN); //should it be INPUT_PULLDOWN?
+  pinMode(ENCSWITCH, INPUT_PULLDOWN); //should it be INPUT_PULLDOWN? maybe not in right pin type for that?
   attachInterrupt(ENCSWITCH,encButtonClick,CHANGE);//interupt for when mode button is clicked
 //onOff true will be manual mode
   i=0;
@@ -283,7 +283,7 @@ logTime=(int)Time.now();//unix time at reading
     
 }
 Serial.printf("scan complete\n");
-nextSDFile();
+nextSDFile();//call function to move to next file
 onOff=TRUE;//return to manual mode
 
 }

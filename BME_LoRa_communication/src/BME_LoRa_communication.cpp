@@ -11,7 +11,7 @@
 #include <SdFat.h>
 #include "Adafruit_BME280.h"
 
-const int BMEADDRESS1=0x76;
+const int BMEADDRESS1=0x76;//wont use yet
 const int BMEADDRESS2=0x77;//original address
 const int BMEDELAY=15000;//btw bme readings
 float tempC1;
@@ -39,15 +39,15 @@ int BMEDataTimer;//when to collect
 void writeSD(int timeStamp,float BMEArray[6]);
 
 //LoRa network constants-how do I know how to set this up outside of FUSE???
-const int RADIONETWORK = 7;    // range of 0-16
-const int SENDADDRESS = 302;   // address of radio to be sent to
+const int RADIONETWORK = 8;    // range of 0-16 I'm using 8
+//const int SENDADDRESS = 302;   // address of radio to be sent to for now I just want to recieve on this code
 const int LIGHTTIME=1000;//for D7 to light for 5 s when new LoRa data recieved-changed to 1s
 const int LIGHTPIN=D7;//turning on, not off?? same for Argon?
 
 // Define User and Credentials
-String password = "AA4104132968BA2224299079021594AB"; // AES128 password
+String password = "RoofAV"; // AES128 password-can this be anything?
 String name = "Laura";
-const int RADIOADDRESS = 0xC1;//my address 
+const int RADIOADDRESS = 0x88;//my address This is where other photon will send data
 
 
 const int TIMEZONE= -6;
@@ -66,7 +66,7 @@ Adafruit_BME280 bme1;//define BME object
 Adafruit_BME280 bme2;//define BME object 
 
 // Let Device OS manage the connection to the Particle Cloud
-SYSTEM_MODE(SEMI_AUTOMATIC);
+SYSTEM_MODE(AUTOMATIC);
 
 // Run the application and system concurrently in separate threads
 //SYSTEM_THREAD(ENABLED);
@@ -78,14 +78,14 @@ void setup() {
   Serial.begin(9600);
   waitFor(Serial.isConnected, 5000);
   delay(1000);
-  /*
+  
 //for LoRa network
-  Serial1.begin(115200);
+  Serial1.begin(115200);//why this number?
   reyaxSetup(password);//call function for LoRa set up
 
-  pinMode(LIGHTPIN,OUTPUT);
-  digitalWrite(LIGHTPIN,LOW);//start off
-
+  //pinMode(LIGHTPIN,OUTPUT);
+  //digitalWrite(LIGHTPIN,LOW);//start off
+/*//leave SD card reader off for now, but will be on Argon
 //intializing SD Card Reader
   if(!sd.begin(CS,SD_SCK_MHZ(10))) {
     Serial.printf("Error starting SD Module");
@@ -110,17 +110,18 @@ while (sd.exists(fileName)) {  //cycle through files until number not found for 
 
   file.close();//everytime line is opened, have to close
   Serial.printf("File headers set up\n");
-
+*/
 //initialize BME
   status=bme1.begin(BMEADDRESS1);//"bme"is just name of object in this function
   if (status==false) {//little bit fancier initialization
     Serial.printf("BME280 at address 0x%02X failed to start",BMEADDRESS1);
   }
-*/
+/*only one BME per microcontroller for now
   status=bme2.begin(BMEADDRESS2);//"bme"is just name of object in this function
   if (status==false) {//little bit fancier initialization
     Serial.printf("BME280 at address 0x%02X failed to start",BMEADDRESS2);
   }
+  */
 
 
   Particle.syncTime();//don't need time zone for unix
@@ -130,7 +131,7 @@ while (sd.exists(fileName)) {  //cycle through files until number not found for 
 
 
 void loop() {//will need to have variables for both BME's on Argon
-/*
+
 // listen for incoming lora messages 
   if (Serial1.available())  { // full incoming buffer: not sure how to do this part..// for FUSE data was:full incoming buffer: +RCV=203,50,35.08,9,-36,41 
 
@@ -138,7 +139,7 @@ void loop() {//will need to have variables for both BME's on Argon
 //digitalWrite(LIGHTPIN,HIGH);//turn on D7 light for length of LIGHTTIME
 //lightTimer.startTimer(LIGHTTIME);
 
-//strings for incoming data
+//strings for incoming data--I don't understand this-not until parse 3 is data?
     
     String parse0 = Serial1.readStringUntil('=');  //+RCV
     String parse1 = Serial1.readStringUntil(',');  // address received from
@@ -151,13 +152,13 @@ void loop() {//will need to have variables for both BME's on Argon
 
     //then put into array 1st will have to convert to floats (since array data type)
 
-    Serial.printf("parse0: %s\nparse1: %s\nparse2: %s\nparse3: %s\nparse4: %s\nparse5: %s\nparse6: %s\nparse7: %s\n", parse0.c_str(), parse1.c_str(), parse2.c_str(), parse3.c_str(), parse4.c_str(), parse5.c_str(), parse6.c_str(), parse7.c_str());
+    Serial.printf("parse0: %s\n",parse0.c_str());//parse1: %s\nparse2: %s\nparse3: %s\nparse4: %s\nparse5: %s\nparse6: %s\nparse7: %s\n", parse0.c_str(), parse1.c_str(), parse2.c_str(), parse3.c_str(), parse4.c_str(), parse5.c_str(), parse6.c_str(), parse7.c_str());
     delay(100);
 
 
 
   }
-  */
+  
   if((millis()-BMEDataTimer)>BMEDELAY){//or use instead of timer object  
   timeStamp=(int)Time.now();//function to get unix time
   //for(i=0;i<9;i++){}
