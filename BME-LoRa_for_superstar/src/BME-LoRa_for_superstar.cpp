@@ -10,14 +10,10 @@
 #include "Particle.h"
 #include "Adafruit_BME280.h"
 
-const int BMEADDRESS2=0x77;//original address
+
+
+const int BMEADDRESS1=0x76;//original address
 const int BMEDELAY=15000;//btw bme readings
-//float tempC1SS;
-//float tempC2;
-//float pressPA1SS;
-//float pressPA2;
-//float humidRH1SS;
-//float humidRH2;
 int timeStamp;
 bool status;
 float SSBMEArray[3];//temp, humidity, pressure for both BME's (plus data coming from other microcontroller?)
@@ -25,17 +21,24 @@ const int DATAINT=15000;//interval between data collection
 int BMEDataTimer;//when to collect
 
 //LoRa network constants-how do I know how to set this up outside of FUSE???
+const int RADIOADDRESS=0x44;//SSaddress?
 const int RADIONETWORK = 8;    // range of 0-16 I'm using 8
-const int SENDADDRESS = 0x88;   // address of radio to be sent to for now I just want to recieve on this code
+const int SENDADDRESS = 0x88;   // address of radio to be sent to (ARgon)for now I just want to recieve on this code
+String password = "RoofAV";
+String name = "SSData"; //probably don't need this
 //const int LIGHTTIME=1000;//for D7 to light for 5 s when new LoRa data recieved-changed to 1s
 //const int LIGHTPIN=D7;//turning on, not off?? same for Argon?
+
+Adafruit_BME280 bme1;//define BME object 
 //declare functions
-void sendData(int timeStamp, float SSBMEArray);
+void sendData(int timeStamp, float SSBMEArray[3]);
+void reyaxSetup(String password);
+ 
 
 
 
 // Let Device OS manage the connection to the Particle Cloud
-SYSTEM_MODE(SEMI_AUTOMATIC);//semi?
+SYSTEM_MODE(AUTOMATIC);//semi?
 
 // Run the application and system concurrently in separate threads
 SYSTEM_THREAD(ENABLED);
@@ -53,7 +56,7 @@ void setup() {
   reyaxSetup(password);//call function for LoRa set up
 
   //initialize BME
-  status=bme1.begin(BMEADDRESS2);//"bme"is just name of object in this function
+  status=bme1.begin(BMEADDRESS1);//"bme"is just name of object in this function
   if (status==false) {//little bit fancier initialization
     Serial.printf("BME280 at address 0x%02X failed to start",BMEADDRESS1);
   }
@@ -74,9 +77,9 @@ void loop() {
   //BMEArray[0]=bme1.readTemperature();//deg C
  // BMEArray[1] = bme1.readHumidity();//%RH
  // BMEArray[2] =bme1.readPressure();//pascals
-  SSBMEArray[0] =bme2.readTemperature();//deg C
-  SSBMEArray[1] = bme2.readHumidity();//%RH
-  SSBMEArray[2] =bme2.readPressure();//pascals
+  SSBMEArray[0] =bme1.readTemperature();//deg C
+  SSBMEArray[1] = bme1.readHumidity();//%RH
+  SSBMEArray[2] =bme1.readPressure();//pascals
  // Serial.printf("time=%i\ntempC1=%0.2f\nhumidRH1=%0.2f\npressPA1=%0.2f\n",timeStamp,BMEArray[0],BMEArray[1],BMEArray[2]);
  Serial.printf("time=%i\ntempC1=%0.2f\nhumidRH1=%0.2f\npressPA1=%0.2f\n",timeStamp,SSBMEArray[0],SSBMEArray[1],SSBMEArray[2]);
   
@@ -87,15 +90,15 @@ void loop() {
 
   if (Serial1.available())  {
 
-  sendData(timeStamp,SSBMEArray[0],SSBMEArray[1],SSBMEArray[2]);
+  sendData(timeStamp,SSBMEArray);
   
   }
   
   
 }
-void sendData(int timeStamp,float SSBMEArray) {
+void sendData(int timeStamp,float SSBMEArray[3]) {
   char buffer[60];//declare empty buffer within function
-  sprintf(buffer, "AT+SEND=%i,%f,%f,%f\r\n", timeStamp, SSBMEArray[0], SSBMEArray[1],SSBMEArray[2]);//what is \r? write data to buffer
+  sprintf(buffer, "AT+SEND=%i,%0.2f,%0.2f,%0.2f\n", timeStamp, SSBMEArray[0], SSBMEArray[1],SSBMEArray[2]);//what is \r? write data to buffer
   Serial1.printf("%s",buffer);
   //Serial1.println(buffer); 
   delay(1000);

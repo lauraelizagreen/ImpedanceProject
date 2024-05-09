@@ -11,14 +11,14 @@
 #include <SdFat.h>
 #include "Adafruit_BME280.h"
 
-const int BMEADDRESS1=0x76;//wont use yet
-const int BMEADDRESS2=0x77;//original address
+//const int BMEADDRESS1=0x76;//wont use yet
+const int BMEADDRESS2=0x77;// address set to
 const int BMEDELAY=15000;//btw bme readings
-float tempC1;
+//float tempC1;
 float tempC2;
-float pressPA1;
+//float pressPA1;
 float pressPA2;
-float humidRH1;
+//float humidRH1;
 float humidRH2;
 int timeStamp;
 bool status;
@@ -30,9 +30,7 @@ const char FILE_BASE_NAME[]="Data";
 int fileNumber;
 const uint8_t BASE_NAME_SIZE=sizeof(FILE_BASE_NAME)-1;
 char fileName[13];
-
-//int dataArray[2];//4 eventually: timestamp and 3 bmes
-
+//timer variables
 const int DATAINT=15000;//interval between data collection
 int BMEDataTimer;//when to collect
 ///declare function
@@ -40,13 +38,13 @@ void writeSD(int timeStamp,float BMEArray[6]);
 
 //LoRa network constants-how do I know how to set this up outside of FUSE???
 const int RADIONETWORK = 8;    // range of 0-16 I'm using 8
-//const int SENDADDRESS = 302;   // address of radio to be sent to for now I just want to recieve on this code
+//const int SENDADDRESS = 302;   // address of radio to be sent to for now I just want to recieve on this code 
 const int LIGHTTIME=1000;//for D7 to light for 5 s when new LoRa data recieved-changed to 1s
 const int LIGHTPIN=D7;//turning on, not off?? same for Argon?
 
 // Define User and Credentials
 String password = "RoofAV"; // AES128 password-can this be anything?
-String name = "Laura";
+String name = "SSData";
 const int RADIOADDRESS = 0x88;//my address This is where other photon will send data
 
 
@@ -54,7 +52,7 @@ const int TIMEZONE= -6;
 const unsigned int UPDATE=30000;//this needs to be same as BMEDataTimer??
 
 //declare LoRa functions
-//void sendData(String name, float latitude, float longitude, int satelittes);//only recieving with this code will need this for other microcontroller?
+//void sendData(//);//only recieving with this code will need this for other microcontroller?
 void reyaxSetup(String password); 
 
 
@@ -112,16 +110,18 @@ while (sd.exists(fileName)) {  //cycle through files until number not found for 
   Serial.printf("File headers set up\n");
 */
 //initialize BME
+/*
   status=bme1.begin(BMEADDRESS1);//"bme"is just name of object in this function
   if (status==false) {//little bit fancier initialization
     Serial.printf("BME280 at address 0x%02X failed to start",BMEADDRESS1);
   }
-/*only one BME per microcontroller for now
+  */
+//only one BME per microcontroller for now
   status=bme2.begin(BMEADDRESS2);//"bme"is just name of object in this function
   if (status==false) {//little bit fancier initialization
     Serial.printf("BME280 at address 0x%02X failed to start",BMEADDRESS2);
   }
-  */
+  
 
 
   Particle.syncTime();//don't need time zone for unix
@@ -142,18 +142,20 @@ void loop() {//will need to have variables for both BME's on Argon
 //strings for incoming data--I don't understand this-not until parse 3 is data?
     
     String parse0 = Serial1.readStringUntil('=');  //+RCV
-    String parse1 = Serial1.readStringUntil(',');  // address received from
-    String parse2 = Serial1.readStringUntil(',');  // buffer length
-    String parse3 = Serial1.readStringUntil(',');  // fuseSound
-    String parse4 = Serial1.readStringUntil(',');  // fuseDust
-    String parse5 = Serial1.readStringUntil(',');  // rssi
-    String parse6 = Serial1.readStringUntil('\n'); // snr
-    String parse7 = Serial1.readString();          // extra
+    //String parse1 = Serial1.readStringUntil(',');  // address received from
+    //String parse2 = Serial1.readStringUntil(',');  // buffer length
+    //String parse3 = Serial1.readStringUntil(',');  // fuseSound
+    //String parse4 = Serial1.readStringUntil(',');  // fuseDust
+    //String parse5 = Serial1.readStringUntil(',');  // rssi
+    //String parse6 = Serial1.readStringUntil('\n'); // snr
+    //String parse7 = Serial1.readString();          // extra
 
-    //then put into array 1st will have to convert to floats (since array data type)
+    
 
     Serial.printf("parse0: %s\n",parse0.c_str());//parse1: %s\nparse2: %s\nparse3: %s\nparse4: %s\nparse5: %s\nparse6: %s\nparse7: %s\n", parse0.c_str(), parse1.c_str(), parse2.c_str(), parse3.c_str(), parse4.c_str(), parse5.c_str(), parse6.c_str(), parse7.c_str());
     delay(100);
+
+    //then put into array 1st will have to convert to floats (since array data type)
 
 
 
