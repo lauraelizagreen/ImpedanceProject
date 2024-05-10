@@ -91,7 +91,7 @@ void setup() {
 
    //OLED initialization
 display.begin(SSD1306_SWITCHCAPVCC, 0x3C); //initialize with 12C address
-//void setRotation(uint8_t rotation);//how to use this to flip?
+void setRotation(uint8_t rotation);
 display.clearDisplay();   // clears the screen and buffer
 //display.display();
 
@@ -164,8 +164,8 @@ while (sd.exists(fileName)) {  //cycle through files until number not found for 
 
 void loop() {
   
-  MQTT_connect();
-  MQTT_ping();
+  //MQTT_connect();
+ // MQTT_ping();
   
 
   //for manual mode/scan mode
@@ -190,19 +190,42 @@ delay(1000);
 Serial.printf("%i Hz\n",manFreq);//initial freq
 delay(1000);
 
-
-  //display.clearDisplay();
+  display.clearDisplay();
   display.setTextSize(2);//
   display.setTextColor(WHITE);
-  display.setCursor(0,5);
-  display.printf("MANUAL MODE:\nUSE DIAL TO SET FREQUENCY");
-  display.startscrollright(0x00, 0x0F);
+  display.setCursor(0,10);
+  display.printf("MANUALMODE");
   display.display();
   delay(1000);
   display.clearDisplay();
+  display.setTextSize(2);//
+  display.setTextColor(WHITE);
+  display.setCursor(10,10);
+  display.println("USE DIAL");
   display.display();
+  delay(1000);
+  display.clearDisplay();
+  display.setCursor(15,10);
+  display.println("TO SET");
+  display.display();
+  delay(500);
+  display.clearDisplay();
+  display.setCursor(10,10);
+  display.println("FREQUENCY");
+  display.display();
+  delay(1000);
+
+  
+
+  display.clearDisplay();
+  display.setTextSize(2);//
+  display.setTextColor(WHITE);
+  display.setCursor(5,10);
   display.printf("%i Hz\n",manFreq);
   display.display();
+  delay(1000);
+
+
   
 
   dialPosition2=myEnc.read();
@@ -229,10 +252,9 @@ delay(1000);
 display.clearDisplay();//print frequency to OLED
   display.setTextSize(2);
   display.setTextColor(WHITE);
-  display.setCursor(0,5);
+  display.setCursor(5,10);
   display.printf("%0.2f HZ",manFreq);
-  //display.startscrollright(0x00, 0x0F);
-  display.display();
+ display.display();
   delay(3000);
   
     }
@@ -253,15 +275,16 @@ display.clearDisplay();//print frequency to OLED
   display.setTextColor(WHITE);
   display.setCursor(0,5);
   display.printf("measuring");
-  display.startscrollright(0x00, 0x0F);
   display.display();
+  delay(1000);
   
-  
+  /*
     if(mqtt.Update()) {
        pubFeedZDataRatio.publish(manRatio);//publish max ratio
       Serial.printf("Publishing %.2f at %i\n",manRatio,manFreq);
        
       } 
+      */
       
      lastTimeMeas=millis();
       }
@@ -275,13 +298,15 @@ else{
 digitalWrite(ENCGREEN,HIGH);
 digitalWrite(ENCBLUE,LOW);
 Serial.printf("Scan mode");
+delay(1000);
+
 display.clearDisplay();//print frequency to OLED
-  display.setTextSize(2);
+display.setTextSize(2);
   display.setTextColor(WHITE);
   display.setCursor(0,5);
   display.printf("SCAN MODE");
-  display.startscrollright(0x00, 0x0F);
   display.display();
+  delay(1000);
   
 frequency=500;
   //if scan button clicked (=scan mode) else in manual encoder to Hz and click (other button) then write data = inputted data interval
@@ -298,8 +323,8 @@ logTime=(int)Time.now();//unix time at reading
   display.setTextColor(WHITE);
   display.setCursor(0,5);
   display.printf("%i,%u,%0.2f,%0.2f,%0.2f\n",logTime,frequency,impedArray[0],impedArray[1],impedArray[2]);
-  display.startscrollright(0x00, 0x0F);
   display.display();
+  delay(1000);
     frequency=frequency+500;//increment frequency for next loop
     sineGen.setFreq(frequency);//change frequency in sin wave generator
     
@@ -310,8 +335,8 @@ display.clearDisplay();//print frequency to OLED
   display.setTextColor(WHITE);
   display.setCursor(0,5);
   display.printf("SCAN COMPLETE");
-  display.startscrollright(0x00, 0x0F);
   display.display();
+  delay(1000);
 nextSDFile();//call function to move to next file
 onOff=TRUE;//return to manual mode
 
