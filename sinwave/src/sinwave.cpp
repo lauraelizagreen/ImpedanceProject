@@ -185,10 +185,10 @@ digitalWrite(ENCGREEN,LOW);//low turns on/high off, so blue in manual mode(conne
   
 //Serial.printf("onOff=%i\n",onOff);//un-comment to check
 //delay(1000);
-Serial.printf("manual mode: enter frequency with dial\n");
-delay(1000);
-Serial.printf("%i Hz\n",manFreq);//initial freq
-delay(1000);
+//Serial.printf("manual mode: enter frequency with dial\n");
+//delay(1000);
+//Serial.printf("%i Hz\n",manFreq);//initial freq
+//delay(1000);
 
   display.clearDisplay();
   display.setTextSize(2);//
@@ -246,14 +246,14 @@ delay(1000);
    manFreq=map(dialPosition1,0,95,100,100000);//convert from dial position to frequency
    sineGen.setFreq(manFreq);//change sin wave freq
   
-Serial.printf("%i Hz\n",manFreq);//print to serial monitor
-delay(1000);
+//Serial.printf("%i Hz\n",manFreq);//print to serial monitor
+//delay(1000);
 
 display.clearDisplay();//print frequency to OLED
   display.setTextSize(2);
   display.setTextColor(WHITE);
   display.setCursor(5,10);
-  display.printf("%0.2f HZ",manFreq);
+  display.printf("%i Hz",manFreq);
  display.display();
   delay(3000);
   
@@ -264,11 +264,11 @@ display.clearDisplay();//print frequency to OLED
 
 //could enter measurement interval on key pad?
   if((millis()-lastTimeMeas > 10000)) {//publishing (how often?)
-  Serial.printf("measuring\n");//print to serial monitor
-  delay(1000);
+  //Serial.printf("measuring\n");//print to serial monitor
+  //delay(1000);
      logTime=(int)Time.now();//unix time at reading
      manRatio=ratAPRead();//call function to measure and calculate ratio every (sec?)
-  Serial.printf("%i Z magnitude is %0.2f\n",logTime,manRatio);
+  //Serial.printf("%i Z magnitude is %0.2f\n",logTime,manRatio);
   
   display.clearDisplay();//print frequency to OLED
   display.setTextSize(2);
@@ -297,8 +297,8 @@ else{
 
 digitalWrite(ENCGREEN,HIGH);
 digitalWrite(ENCBLUE,LOW);
-Serial.printf("Scan mode");
-delay(1000);
+//Serial.printf("Scan mode");
+//delay(1000);
 
 display.clearDisplay();//print frequency to OLED
 display.setTextSize(2);
@@ -317,19 +317,24 @@ logTime=(int)Time.now();//unix time at reading
   impedArray[0]=pulse;
   impedArray[1]=plant;
   writeSD(logTime,frequency,impedArray);//call SD card function
-   Serial.printf("%i,%u,%0.2f,%0.2f,%0.2f\n",logTime,frequency,impedArray[0],impedArray[1],impedArray[2]); 
+   //Serial.printf("%i,%u,%0.2f,%0.2f,%0.2f\n",logTime,frequency,impedArray[0],impedArray[1],impedArray[2]); 
    display.clearDisplay();//print frequency to OLED
   display.setTextSize(2);
   display.setTextColor(WHITE);
   display.setCursor(0,5);
-  display.printf("%i,%u,%0.2f,%0.2f,%0.2f\n",logTime,frequency,impedArray[0],impedArray[1],impedArray[2]);
+  display.printf(" %u Hz=",frequency);
   display.display();
-  delay(1000);
+  delay(500);
+  display.clearDisplay();
+  display.setCursor(0,5);
+  display.printf("%0.2f",impedArray[2]);
+  display.display();
+  delay(500);
     frequency=frequency+500;//increment frequency for next loop
     sineGen.setFreq(frequency);//change frequency in sin wave generator
     
 }
-Serial.printf("scan complete\n");
+//Serial.printf("scan complete\n");
 display.clearDisplay();//print frequency to OLED
   display.setTextSize(2);
   display.setTextColor(WHITE);
