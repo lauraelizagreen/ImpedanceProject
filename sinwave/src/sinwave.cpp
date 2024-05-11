@@ -217,17 +217,17 @@ digitalWrite(ENCGREEN,LOW);//low turns on/high off, so blue in manual mode(conne
   display.setTextColor(WHITE);
   display.setCursor(0,10);
   display.printf("MANUALMODE");
-  display.display();
+  display.display();//this is the part that takes time to light/not light each pixel
   delay(1000);
   display.clearDisplay();
   display.setTextSize(2);//
   display.setTextColor(WHITE);
-  display.setCursor(10,10);
+  display.setCursor(15,10);
   display.println("USE DIAL");
   display.display();
   delay(1000);
   display.clearDisplay();
-  display.setCursor(15,10);
+  display.setCursor(22,10);
   display.println("TO SET");
   display.display();
   delay(500);
@@ -265,7 +265,7 @@ digitalWrite(ENCGREEN,LOW);//low turns on/high off, so blue in manual mode(conne
     
 
    dialPosition1=dialPosition2;//redefine to see furthur changes
-   manFreq=map(dialPosition1,0,95,100,100000);//convert from dial position to frequency
+   manFreq=map(dialPosition1,0,95,0,100000);//convert from dial position to frequency-can this move in increments of 50?
    sineGen.setFreq(manFreq);//change sin wave freq
   
 //Serial.printf("%i Hz\n",manFreq);//print to serial monitor
@@ -325,12 +325,22 @@ digitalWrite(ENCBLUE,LOW);
 display.clearDisplay();//print frequency to OLED
 display.setTextSize(2);
   display.setTextColor(WHITE);
-  display.setCursor(0,5);
-  display.printf("SCAN MODE");
+  display.setCursor(10,5);
+  display.printf("SCAN"); 
   display.display();
-  delay(1000);
-  display.printf("logging to: %s",fileName);
-  delay(1000);
+  delay(500);
+  display.clearDisplay();
+ display.printf("MODE");
+ display.display();
+ delay(500);
+ display.clearDisplay();
+ display.setCursor(0,5);
+  display.printf("logging to:");
+  display.display();
+  delay(500);
+  display.clearDisplay();
+  display.printf("%s",fileName);
+  display.display();
   
 frequency=500;
 sweepMax=0;
@@ -357,6 +367,7 @@ logTime=(int)Time.now();//unix time at reading
   delay(500);
   if (impedArray[2]>sweepMax){
     sweepMax=impedArray[2];
+    Serial.printf("sweep max=%0.2f",sweepMax);
   }
   cornerArray[i]=impedArray[2];
     frequency=frequency+500;//increment frequency for next loop
@@ -364,16 +375,28 @@ logTime=(int)Time.now();//unix time at reading
     
 }
 cornerRat=cornerRatio(cornerArray);
-//Serial.printf("scan complete\n");
+Serial.printf("scan complete");
+delay(1000);
+Serial.printf("corner ratio=%0.2f",cornerRat);
+delay(1000);
 display.clearDisplay();
   display.setTextSize(2);
   display.setTextColor(WHITE);
+  display.setCursor(10,5);
+  display.printf("SCAN"); 
+  display.display();
+  delay(500);
+  display.clearDisplay();
+  display.printf("COMPLETE");
+  delay(500);
+  display.clearDisplay();
   display.setCursor(0,5);
-  display.printf("SCAN COMPLETE");
+  display.printf("Corner Ratio=");//what should this be called?
   display.display();
   delay(1000);
-  display.printf("Corner Ratio=%0.2f",cornerRat);//what should this be called?
-  delay(500);
+  display.clearDisplay();
+display.printf("%0.2f",cornerRat);
+delay(1000);
 nextSDFile();//call function to move to next file
 onOff=TRUE;//return to manual mode
 
@@ -440,7 +463,7 @@ startRead=millis();
 float cornerRatio(float cornerArray[200]){//will be built as code loops through ratAPReads, so called after that loop
   float maxSweep;
   float halfSweep;
-  halfSweep=0;
+  halfSweep=100;
   for(i=0;i<200;i++){
   if ((halfSweep-(0.5*maxSweep))>(cornerArray[i]-(0.5*maxSweep))){
    halfSweep=cornerArray[i];
