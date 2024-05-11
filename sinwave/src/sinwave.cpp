@@ -20,7 +20,7 @@
 #include "Adafruit_MQTT/Adafruit_MQTT.h"
 #include "credentials.h"//be sure to add to ignore file
 
-SYSTEM_MODE(SEMI_AUTOMATIC);
+SYSTEM_MODE(AUTOMATIC);//to manually set credentials
 
 TCPClient TheClient; 
 
@@ -42,11 +42,14 @@ const int  PULSEREADPIN=A3;
 const int PLANTREADPIN=A1;
 float pulse;//make these global so they can be called in code
 float plant;
+float sweepMax;//for highest ratio in each sweep to calculate corner
+float cornerRat;
 float manRatio;//for function return in manual mode
 int i;//counter to fill array for max ratio
 ///arrays
 float ratReadArray[200][2];//use to determine max and ratio at 0.5 of max
 float impedArray[3];//for printing to SD Card
+float cornerArray[200];
 //encoder variables
 const int ENCPINA=D9;
 const int ENCPINB=D10;
@@ -70,6 +73,7 @@ unsigned int lastTimeMeas;//for measurement interval and  publishing to Adafruit
 
 ////declare functions
 float ratAPRead();//function to read pulse, plant and calculate max ratio every second
+float cornerRatio(float cornerArray[200]);//to calculate ratio at 50% max
 void writeSD(int logTime, unsigned int frequency, float impedArray[3]);//only impedance variables in array since they're same data type
 void nextSDFile();
 void MQTT_connect();//funtions to connect and maintain connection to Adafruit io
@@ -80,7 +84,7 @@ void encButtonClick();//for interrupt
 SdFat sd;
 SdFile file;
 Encoder myEnc(ENCPINA,ENCPINB);
-Button encSwitch(ENCSWITCH,FALSE);//false for internal pull-down (not pull-up) not needed as object if in interupt function???
+//Button encSwitch(ENCSWITCH,FALSE);//false for internal pull-down (not pull-up) not needed as object if in interupt function???
 AD9833 sineGen(AD9833_FSYNC, MASTER_CLOCK);//sine wave generator
 Adafruit_SSD1306 display(OLED_RESET);
 
@@ -88,7 +92,25 @@ void setup() {
   Serial.begin(9600);
   Serial.printf("Starting Serial Monitor...\n");
   delay(5000);
+/*
+   WiFi.on();//to manually set credentials
+  WiFi.clearCredentials();
+  WiFi.setCredentials("IoTNetwork");
 
+  WiFi.connect();
+  while(WiFi.connecting()){
+    Serial.printf(".");
+  }
+  Serial.printf("\n\n");
+  */
+/*
+  WiFi.on();
+  WiFi.connect();
+  while(WiFi.connecting()) {
+    Serial.printf(".");
+  }
+  Serial.printf("\n\n");
+*/
    //OLED initialization
 display.begin(SSD1306_SWITCHCAPVCC, 0x3C); //initialize with 12C address
 void setRotation(uint8_t rotation);
@@ -164,8 +186,8 @@ while (sd.exists(fileName)) {  //cycle through files until number not found for 
 
 void loop() {
   
-  //MQTT_connect();
- // MQTT_ping();
+  MQTT_connect();
+  MQTT_ping();
   
 
   //for manual mode/scan mode
@@ -173,7 +195,7 @@ void loop() {
   if(encSwitch.isClicked()) {//using button heterofile with bool function isClicked make this an interrupt funciton?
     onOff=!onOff;//assigns onoff opposite of existing (toggles)
     lastTimeMeas=millis();//initially sets measurement interval timer
-  } 
+  }  
   */
   //manual mode
   
@@ -228,7 +250,7 @@ digitalWrite(ENCGREEN,LOW);//low turns on/high off, so blue in manual mode(conne
 
   
 
-  dialPosition2=myEnc.read();
+  dialPosition2=-(myEnc.read());
   
   if(dialPosition2>95){
     myEnc.write(95);
@@ -278,13 +300,13 @@ display.clearDisplay();//print frequency to OLED
   display.display();
   delay(1000);
   
-  /*
+  
     if(mqtt.Update()) {
        pubFeedZDataRatio.publish(manRatio);//publish max ratio
       Serial.printf("Publishing %.2f at %i\n",manRatio,manFreq);
        
       } 
-      */
+      
       
      lastTimeMeas=millis();
       }
@@ -307,8 +329,11 @@ display.setTextSize(2);
   display.printf("SCAN MODE");
   display.display();
   delay(1000);
+  display.printf("logging to: %s",fileName);
+  delay(1000);
   
 frequency=500;
+sweepMax=0;
   //if scan button clicked (=scan mode) else in manual encoder to Hz and click (other button) then write data = inputted data interval
 for(i=0;i<200;i++){//keep reading until array full -could just add to hz here
 logTime=(int)Time.now();//unix time at reading
@@ -330,18 +355,25 @@ logTime=(int)Time.now();//unix time at reading
   display.printf("%0.2f",impedArray[2]);
   display.display();
   delay(500);
+  if (impedArray[2]>sweepMax){
+    sweepMax=impedArray[2];
+  }
+  cornerArray[i]=impedArray[2];
     frequency=frequency+500;//increment frequency for next loop
     sineGen.setFreq(frequency);//change frequency in sin wave generator
     
 }
+cornerRat=cornerRatio(cornerArray);
 //Serial.printf("scan complete\n");
-display.clearDisplay();//print frequency to OLED
+display.clearDisplay();
   display.setTextSize(2);
   display.setTextColor(WHITE);
   display.setCursor(0,5);
   display.printf("SCAN COMPLETE");
   display.display();
   delay(1000);
+  display.printf("Corner Ratio=%0.2f",cornerRat);//what should this be called?
+  delay(500);
 nextSDFile();//call function to move to next file
 onOff=TRUE;//return to manual mode
 
@@ -396,12 +428,27 @@ startRead=millis();
     ratio=plant/pulse;
 
     if(ratio>ratioMax){
-    ratioMax=ratio;//functData[2]
+    ratioMax=ratio;//functData[2]//could make pointer to return 2 values?
    
 
   }
   }
   return ratioMax;//could whole function be returned with 3 data points?
+}
+
+///function to calculate shoulder of magnitude curve (ratio = 0.5(high ratio))
+float cornerRatio(float cornerArray[200]){//will be built as code loops through ratAPReads, so called after that loop
+  float maxSweep;
+  float halfSweep;
+  halfSweep=0;
+  for(i=0;i<200;i++){
+  if ((halfSweep-(0.5*maxSweep))>(cornerArray[i]-(0.5*maxSweep))){
+   halfSweep=cornerArray[i];
+  }
+  }
+return halfSweep;
+
+
 }
 
 void MQTT_connect() {//actually connects to server, if not connected stuck in loop
