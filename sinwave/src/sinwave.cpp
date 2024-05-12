@@ -42,7 +42,7 @@ const int  PULSEREADPIN=A3;
 const int PLANTREADPIN=A1;
 float pulse;//make these global so they can be called in code
 float plant;
-float sweepMax;//for highest ratio in each sweep to calculate corner
+float maxSweep;//for highest ratio in each sweep to calculate corner
 float cornerRat;
 float manRatio;//for function return in manual mode
 int i;//counter to fill array for max ratio
@@ -325,14 +325,10 @@ digitalWrite(ENCBLUE,LOW);
 display.clearDisplay();//print frequency to OLED
 display.setTextSize(2);
   display.setTextColor(WHITE);
-  display.setCursor(10,5);
-  display.printf("SCAN"); 
+  display.setCursor(0,5);
+  display.printf("SCAN MODE"); 
   display.display();
-  delay(500);
-  display.clearDisplay();
- display.printf("MODE");
- display.display();
- delay(500);
+  delay(1000);
  display.clearDisplay();
  display.setCursor(0,5);
   display.printf("logging to:");
@@ -341,9 +337,10 @@ display.setTextSize(2);
   display.clearDisplay();
   display.printf("%s",fileName);
   display.display();
+  delay(1000);
   
 frequency=500;
-sweepMax=0;
+maxSweep=0;//global variable initialized for each loop
   //if scan button clicked (=scan mode) else in manual encoder to Hz and click (other button) then write data = inputted data interval
 for(i=0;i<200;i++){//keep reading until array full -could just add to hz here
 logTime=(int)Time.now();//unix time at reading
@@ -365,19 +362,19 @@ logTime=(int)Time.now();//unix time at reading
   display.printf("%0.2f",impedArray[2]);
   display.display();
   delay(500);
-  if (impedArray[2]>sweepMax){
-    sweepMax=impedArray[2];
-    Serial.printf("sweep max=%0.2f",sweepMax);
+  if (impedArray[2]>maxSweep){//global found here
+    maxSweep=impedArray[2];
+    Serial.printf("sweep max=%0.2f",maxSweep);
   }
   cornerArray[i]=impedArray[2];
     frequency=frequency+500;//increment frequency for next loop
     sineGen.setFreq(frequency);//change frequency in sin wave generator
     
 }
-cornerRat=cornerRatio(cornerArray);
+cornerRat=cornerRatio(cornerArray);//call function to find (frequency at) ratio closest to .5*max
 Serial.printf("scan complete");
 delay(1000);
-Serial.printf("corner ratio=%0.2f",cornerRat);
+Serial.printf("corner ratio=",cornerRat);//this still isn't calculating correctly and need frequency
 delay(1000);
 display.clearDisplay();
   display.setTextSize(2);
@@ -387,7 +384,9 @@ display.clearDisplay();
   display.display();
   delay(500);
   display.clearDisplay();
+  display.setCursor(0,5);
   display.printf("COMPLETE");
+  display.display();
   delay(500);
   display.clearDisplay();
   display.setCursor(0,5);
@@ -396,6 +395,7 @@ display.clearDisplay();
   delay(1000);
   display.clearDisplay();
 display.printf("%0.2f",cornerRat);
+display.display();
 delay(1000);
 nextSDFile();//call function to move to next file
 onOff=TRUE;//return to manual mode
@@ -461,11 +461,10 @@ startRead=millis();
 
 ///function to calculate shoulder of magnitude curve (ratio = 0.5(high ratio))
 float cornerRatio(float cornerArray[200]){//will be built as code loops through ratAPReads, so called after that loop
-  float maxSweep;
   float halfSweep;
   halfSweep=100;
   for(i=0;i<200;i++){
-  if ((halfSweep-(0.5*maxSweep))>(cornerArray[i]-(0.5*maxSweep))){
+  if ((halfSweep-(0.5*maxSweep))>(cornerArray[i]-(0.5*maxSweep))){//calling global varialbe maxSweep that's found outside function
    halfSweep=cornerArray[i];
   }
   }
