@@ -462,13 +462,16 @@ startRead=millis();
 ///function to calculate shoulder of magnitude curve (ratio = 0.5(high ratio))
 float cornerRatio(float cornerArray[200]){//will be built as code loops through ratAPReads, so called after that loop
   float halfSweep;
+  int halfSweepFreq;
   halfSweep=100;
   for(i=0;i<200;i++){
   if ((halfSweep-(0.5*maxSweep))>(cornerArray[i]-(0.5*maxSweep))){//calling global varialbe maxSweep that's found outside function
    halfSweep=cornerArray[i];
+   halfSweepFreq=(i*500)+500;
   }
   }
 return halfSweep;
+//return halfSweepFreq
 
 
 }
