@@ -361,9 +361,10 @@ logTime=(int)Time.now();//unix time at reading
   display.printf("%0.2f",impedArray[2]);
   display.display();
   delay(500);
+  /////Resistance (real component of Z)=R0*((1/max Ratio)-1) where R0=resistance of voltage divider (known resistance going into circuit)
   if (impedArray[2]>maxSweep){//global found here
     maxSweep=impedArray[2];
-    Serial.printf("sweep max=%0.2f",maxSweep);
+    Serial.printf("sweep max=%0.2f",maxSweep);//max ratio of whole scan where resistance is greatest component (for real part of impedance calc)
   }
   cornerArray[i][1]=impedArray[2];//fill array with frequency and ratios to calculate which at which freq ratio is closest to 0.5
   cornerArray[i][0]=(frequency/1.0);//to convert int to float so it can be in array
@@ -371,7 +372,10 @@ logTime=(int)Time.now();//unix time at reading
     sineGen.setFreq(frequency);//change frequency in sin wave generator
     
 }
-cornerFrequency=cornerFreq(cornerArray);//call function to find (frequency at) ratio closest to .5
+////Reactance(imaginary component of Z)=2pi/corner freq?
+////so |Z|= square root(Reactance^2+Resistance^2)
+////at corner frequency could calculate Z (with imaginary component) since phase angle also known????
+cornerFrequency=cornerFreq(cornerArray);//call function to find (frequency at) ratio closest to .5 (where phase angle = 45 degrees)
 Serial.printf("scan complete");
 delay(1000);
 Serial.printf("corner frequency=",cornerFrequency);
