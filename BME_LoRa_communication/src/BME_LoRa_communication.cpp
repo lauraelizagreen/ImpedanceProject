@@ -14,13 +14,14 @@
 //const int BMEADDRESS1=0x76;//wont use yet
 const int BMEADDRESS2=0x77;// address set to
 const int BMEDELAY=15000;//btw bme readings
-//float tempC1;
-float tempC2;
-//float pressPA1;
+float tempC1;//1 is coming from Superstar
+float tempC2;//2 is here
+float pressPA1;
 float pressPA2;
-//float humidRH1;
+float humidRH1;
 float humidRH2;
-int timeStamp;
+int timeStamp1;//maybe should only be one timestamp
+int timeStamp2;
 bool status;
 float BMEArray[6];//temp, humidity, pressure for both BME's (plus data coming from other microcontroller?)
 
@@ -43,9 +44,9 @@ const int LIGHTTIME=1000;//for D7 to light for 5 s when new LoRa data recieved-c
 const int LIGHTPIN=D7;//turning on, not off?? same for Argon?
 
 // Define User and Credentials
-String password = "RoofAV"; // AES128 password-can this be anything?
+String password = "RoofAV"; // AES128 password-can this be anything? 
 String name = "SSData";
-const int RADIOADDRESS = 0x88;//my address This is where other photon will send data
+const int RADIOADDRESS = 0x88;//my address This is where other photon will send data(2 bytes)
 
 
 const int TIMEZONE= -6;
@@ -141,21 +142,27 @@ void loop() {//will need to have variables for both BME's on Argon
 
 //strings for incoming data--I don't understand this-not until parse 3 is data?
     
-    String parse0 = Serial1.readStringUntil('=');  //+RCV
-    //String parse1 = Serial1.readStringUntil(',');  // address received from
-    //String parse2 = Serial1.readStringUntil(',');  // buffer length
-    //String parse3 = Serial1.readStringUntil(',');  // fuseSound
-    //String parse4 = Serial1.readStringUntil(',');  // fuseDust
-    //String parse5 = Serial1.readStringUntil(',');  // rssi
-    //String parse6 = Serial1.readStringUntil('\n'); // snr
-    //String parse7 = Serial1.readString();          // extra
+    String parse0 = Serial1.readStringUntil('=');  //read until to get to equal sign recieve value
+    String parse1 = Serial1.readStringUntil(',');  // address received from (read until comma)
+    String parse2 = Serial1.readStringUntil(',');  // buffer length
+    String parse3 = Serial1.readStringUntil(',');  // timestamp
+    String parse4 = Serial1.readStringUntil(',');  // temp C
+    String parse5 = Serial1.readStringUntil(',');//humidity
+    String parse6 = Serial1.readStringUntil(',');//pressure
+    String parse7 = Serial1.readStringUntil(',');  // rssi-how strong was signal
+    String parse8 = Serial1.readStringUntil('\n'); // snr-signal to noise ratio
+    String parse9 = Serial1.readString();          // extra-anything left get rid of so doesn't mess up next time
 
     
-
-    Serial.printf("parse0: %s\n",parse0.c_str());//parse1: %s\nparse2: %s\nparse3: %s\nparse4: %s\nparse5: %s\nparse6: %s\nparse7: %s\n", parse0.c_str(), parse1.c_str(), parse2.c_str(), parse3.c_str(), parse4.c_str(), parse5.c_str(), parse6.c_str(), parse7.c_str());
+//parse 
+    Serial.printf("parse0: %s\n,parse1: %s\nparse2: %s\nparse3: %s\nparse4: %s\nparse5: %s\nparse6: %s\nparse7: %s\nparse8: %s\nparse9: %s\n", parse0.c_str(), parse1.c_str(), parse2.c_str(), parse3.c_str(), parse4.c_str(), parse5.c_str(), parse6.c_str(), parse7.c_str(),parse8.c_str(), parse9.c_str());//prints all data that was recieved converts to character string (smaller pieces)
     delay(100);
-
-    //then put into array 1st will have to convert to floats (since array data type)
+    tempC1=parse4.toFloat();//string to float
+    humidRH1=parse5.toFloat();
+    pressPA1=parse6.toFloat();
+    timeStamp1=parse3.toInt();
+  
+    //then put all data into array 1st will have to convert data from superstar to floats (since came in as String data type)
 
 
 
