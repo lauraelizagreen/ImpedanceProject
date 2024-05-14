@@ -376,9 +376,9 @@ logTime=(int)Time.now();//unix time at reading
 ////so |Z|= square root(Reactance^2+Resistance^2)
 ////at corner frequency could calculate Z (with imaginary component) since phase angle also known????
 cornerFrequency=cornerFreq(cornerArray);//call function to find (frequency at) ratio closest to .5 (where phase angle = 45 degrees)
-Serial.printf("scan complete");
+Serial.printf("scan complete\n");
 delay(1000);
-Serial.printf("corner frequency=",cornerFrequency);
+Serial.printf("corner frequency=%0.02f\n",cornerFrequency);
 delay(1000);
 display.clearDisplay();
   display.setTextSize(2);
@@ -470,8 +470,10 @@ float cornerFreq(float cornerArray[200][2]){//will be built as code loops throug
   halfRatio=cornerArray[0][1];//initialize with first ratio value
   for(i=0;i<200;i++){//loop through all ratio values
   if ((abs(cornerArray[i][1]-0.5))<(abs(halfRatio-0.5))){//current ratio difference compared to value assigned to half ratio.
-   halfRatio=cornerArray[i][1];
-   halfRatioFreq=cornerArray[i][0];//frequency at ratio closest to 0.5
+   halfRatio=cornerArray[i][1];//reassign halfRatio to new closer value
+   Serial.printf("halfRatio=%0.2f\n",halfRatio);//for check 
+   halfRatioFreq=cornerArray[i][0];//reassign frequency at i that contains ratio closest to 0.5 
+   Serial.printf("halfRatioFreq=%0.2f\n",halfRatioFreq);//for check
   }
   }
 return halfRatioFreq;
