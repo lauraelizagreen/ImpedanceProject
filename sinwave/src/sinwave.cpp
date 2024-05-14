@@ -25,7 +25,10 @@ SYSTEM_MODE(AUTOMATIC);//to manually set credentials
 TCPClient TheClient; 
 
 Adafruit_MQTT_SPARK mqtt(&TheClient,AIO_SERVER,AIO_SERVERPORT,AIO_USERNAME,AIO_KEY);
-Adafruit_MQTT_Publish pubFeedZDataRatio = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/ZDataRatio");
+Adafruit_MQTT_Publish pubFeedZHighRatio = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/highRatio");
+Adafruit_MQTT_Publish pubFeedZLowRatio = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/lowRatio");
+Adafruit_MQTT_Publish pubFeedZCornerFreq = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/cornerFreq");
+Adafruit_MQTT_Publish pubFeedZCornerRatio = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/cornerRatio");
 /// for sin wave generator
 const int AD9833_FSYNC = D14;//will replace pulse pin for sin wave output
 const int MASTER_CLOCK = 25000000;//Hz
@@ -44,7 +47,10 @@ float pulse;//make these global so they can be called in code
 float plant;
 float maxSweep;//for highest ratio in each sweep to calculate corner
 float cornerFrequency;
+float cornerFreqRatio;//closest 0.5*max ratio
 float manRatio;//for function return in manual mode
+float ratioLow;//ratios at highest and lowest freq
+float ratioHigh;
 int i;//counter to fill array for max ratio
 ///arrays
 float ratReadArray[200][2];//use to determine max and ratio at 0.5 of max and frequency
@@ -74,6 +80,7 @@ unsigned int lastTimeMeas;//for measurement interval and  publishing to Adafruit
 ////declare functions
 float ratAPRead();//function to read pulse, plant and calculate max ratio every second
 float cornerFreq(float cornerArray[200][2]);//to calculate at what frequency ratio =.5
+float cornerRatio(float cornerArray[200][2]);//to return that ratio
 void writeSD(int logTime, unsigned int frequency, float impedArray[3]);//only impedance variables in array since they're same data type
 void nextSDFile();
 void MQTT_connect();//funtions to connect and maintain connection to Adafruit io
@@ -185,11 +192,8 @@ while (sd.exists(fileName)) {  //cycle through files until number not found for 
 }
 
 void loop() {
-  
-  MQTT_connect();
-  MQTT_ping();
-  
-
+  //MQTT_connect();
+ // MQTT_ping();
   //for manual mode/scan mode
   /*
   if(encSwitch.isClicked()) {//using button heterofile with bool function isClicked make this an interrupt funciton?
@@ -292,20 +296,13 @@ display.clearDisplay();//print frequency to OLED
      manRatio=ratAPRead();//call function to measure and calculate ratio every (sec?)
   //Serial.printf("%i Z magnitude is %0.2f\n",logTime,manRatio);
   
-  display.clearDisplay();//print frequency to OLED
+  display.clearDisplay();
   display.setTextSize(2);
   display.setTextColor(WHITE);
   display.setCursor(0,5);
   display.printf("measuring");
   display.display();
   delay(1000);
-  
-  
-    if(mqtt.Update()) {
-       pubFeedZDataRatio.publish(manRatio);//publish max ratio
-      Serial.printf("Publishing %.2f at %i\n",manRatio,manFreq);
-       
-      } 
       
       
      lastTimeMeas=millis();
@@ -362,7 +359,7 @@ logTime=(int)Time.now();//unix time at reading
   display.display();
   delay(500);
   /////Resistance (real component of Z)=R0*((1/max Ratio)-1) where R0=resistance of voltage divider (known resistance going into circuit)
-  if (impedArray[2]>maxSweep){//global found here
+  if (impedArray[2]>maxSweep){//global maxSweep for highest ratio found here
     maxSweep=impedArray[2];
     Serial.printf("sweep max=%0.2f",maxSweep);//max ratio of whole scan where resistance is greatest component (for real part of impedance calc)
   }
@@ -372,12 +369,32 @@ logTime=(int)Time.now();//unix time at reading
     sineGen.setFreq(frequency);//change frequency in sin wave generator
     
 }
+ratioLow=cornerArray[0][1];//ratio at lowest and highest freq measured (to publish)
+ratioHigh=cornerArray[199][1];
 ////Reactance(imaginary component of Z)=2pi/corner freq?
 ////so |Z|= square root(Reactance^2+Resistance^2)
 ////at corner frequency could calculate Z (with imaginary component) since phase angle also known????
-cornerFrequency=cornerFreq(cornerArray);//call function to find (frequency at) ratio closest to .5 (where phase angle = 45 degrees)
+cornerFrequency=cornerFreq(cornerArray);//call functions to find (frequency at) ratio closest to max *.5 (where phase angle = 45 degrees)
+cornerFreqRatio=cornerRatio(cornerArray);
 Serial.printf("scan complete\n");
 delay(1000);
+Serial.printf("ratioLow=%0.2f\nratioHigh=%0.2f\ncornerFreq=%0.2f\ncornerRatio=%0.2f\n",ratioLow,ratioHigh,cornerFrequency,cornerFreqRatio);
+MQTT_connect();
+MQTT_ping();
+//publish to Adafruit every scan
+//if((millis()-lastTimeMeas > 10000)) {//publishing (how often?)just for every sweep now
+ if(mqtt.Update()) {
+       pubFeedZHighRatio.publish(ratioHigh);// ratio at highest Freq
+      pubFeedZLowRatio.publish(ratioLow);//publish ratio at lowest freq
+      pubFeedZCornerFreq.publish(cornerFrequency);//publish corner freq
+      pubFeedZCornerRatio.publish(cornerFreqRatio);//publish corner ratio
+      Serial.printf("Publishing to adafruit\n");
+        
+     }
+        //lastTimeMeas=millis();
+
+      
+ 
 Serial.printf("corner frequency=%0.02f\n",cornerFrequency);
 delay(1000);
 display.clearDisplay();
@@ -493,7 +510,7 @@ float cornerFreq(float cornerArray[200][2]){//will be built as code loops throug
   float halfRatioFreq;
   halfRatio=cornerArray[0][1];//initialize with first ratio value
   for(i=0;i<200;i++){//loop through all ratio values
-  if ((abs(cornerArray[i][1]-0.5))<(abs(halfRatio-0.5))){//current ratio difference compared to value assigned to half ratio.
+  if ((abs(cornerArray[i][1]-(0.5*maxSweep)))<(abs(halfRatio-(0.5*maxSweep)))){//current ratio difference compared to value assigned to half ratio.
    halfRatio=cornerArray[i][1];//reassign halfRatio to new closer value
    Serial.printf("halfRatio=%0.2f\n",halfRatio);//for check 
    halfRatioFreq=cornerArray[i][0];//reassign frequency at i that contains ratio closest to 0.5 
@@ -504,6 +521,22 @@ return halfRatioFreq;
 //return halfRatio; //to check if calculated correctly
 
 
+}
+
+//not sure how to return 2 variables so making separate function for ratio
+float cornerRatio(float cornerArray[200][2]){//will be built as code loops through ratAPReads, so called after that loop
+  float halfRatio;
+  float halfRatioFreq;
+  halfRatio=cornerArray[0][1];//initialize with first ratio value
+  for(i=0;i<200;i++){//loop through all ratio values
+  if ((abs(cornerArray[i][1]-(0.5*maxSweep)))<(abs(halfRatio-(0.5*maxSweep)))){//current ratio difference compared to value assigned to half ratio.
+   halfRatio=cornerArray[i][1];//reassign halfRatio to new closer value
+   Serial.printf("halfRatio=%0.2f\n",halfRatio);//for check 
+   halfRatioFreq=cornerArray[i][0];//reassign frequency at i that contains ratio closest to 0.5 
+   Serial.printf("halfRatioFreq=%0.2f\n",halfRatioFreq);//for check
+  }
+  }
+return halfRatio;
 }
 
 void MQTT_connect() {//actually connects to server, if not connected stuck in loop
