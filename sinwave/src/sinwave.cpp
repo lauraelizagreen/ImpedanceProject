@@ -265,7 +265,7 @@ digitalWrite(ENCGREEN,LOW);//low turns on/high off, so blue in manual mode(conne
     
 
    dialPosition1=dialPosition2;//redefine to see furthur changes
-   manFreq=map(dialPosition1,0,95,0,100000);//convert from dial position to frequency-can this move in increments of 50?
+   manFreq=map(dialPosition1,0,95,2000,48000);//convert from dial position to frequency-can this move in increments of 50?
    sineGen.setFreq(manFreq);//change sin wave freq
   
 //Serial.printf("%i Hz\n",manFreq);//print to serial monitor
@@ -342,7 +342,7 @@ display.setTextSize(2);
 frequency=500;
 maxSweep=0;//global variable initialized for each loop
   //if scan button clicked (=scan mode) else in manual encoder to Hz and click (other button) then write data = inputted data interval
-for(i=0;i<200;i++){//keep reading until array full -could just add to hz here
+for(i=0;i<200;i++){//keep reading until array full -could just add to hz here(200 could be constant that could change with increment)
 logTime=(int)Time.now();//unix time at reading
   impedArray[2]=ratAPRead();//call function here each iteration of this function takes 1 sec, so built in timer (100 sec for all)
   impedArray[0]=pulse;
@@ -438,29 +438,53 @@ while (sd.exists(fileName)) {  //cycle through files until number not found for 
 float ratAPRead() {
   const int READTIME=1000;//average over 1 sec
   unsigned int startRead;
+  float plantMax;
+  float plantMin;
+  float pulseMax;
+  float pulseMin;
   //int hz;
   //float pulse;
   //float plant;
   float ratio;
-  float ratioMax;//max ratio at every one second read
+  //float ratioMax;//max ratio at every one second read
   //float functData[3];
  
-ratioMax=0;
+plantMax=0;
+plantMin=4095;
+pulseMax=0;
+pulseMin=4095;
+
 startRead=millis();
   while((millis()-startRead)<READTIME) {//read and calculate ratio over and over for 1 sec
   
     //analogWrite(PULSEPIN,AVSIG,hz);
     pulse=analogRead(PULSEREADPIN);//pulse functData[0] these are global variables
     plant=analogRead(PLANTREADPIN);//plant functData[1]
-    ratio=plant/pulse;
+    //ratio=plant/pulse;
+    if(plant>plantMax){
+      plantMax=plant;
+    }
+    if(plant<plantMin){
+      plantMin=plant;
+    }
+    if(pulse>pulseMax){
+      pulseMax=pulse;
+    }
+    if(pulse<pulseMin){
+      pulseMin=pulse;
+    }
+  }
+ratio=(plantMax-plantMin)/(pulseMax-pulseMin);
+return ratio;
 
+/*
     if(ratio>ratioMax){
     ratioMax=ratio;//functData[2]//could make pointer to return 2 values?
-   
+   */
 
-  }
-  }
-  return ratioMax;//could whole function be returned with 3 data points?
+  
+  
+  //return ratioMax;//could whole function be returned with 3 data points?
 }
 
 ///function to calculate shoulder of magnitude curve (ratio = 0.5) here increments of 500 Hz, maybe will want smaller?
