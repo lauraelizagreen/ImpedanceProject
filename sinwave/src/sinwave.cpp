@@ -43,13 +43,13 @@ const int PLANTREADPIN=A1;
 float pulse;//make these global so they can be called in code
 float plant;
 float maxSweep;//for highest ratio in each sweep to calculate corner
-float cornerRat;
+float cornerFrequency;
 float manRatio;//for function return in manual mode
 int i;//counter to fill array for max ratio
 ///arrays
-float ratReadArray[200][2];//use to determine max and ratio at 0.5 of max
+float ratReadArray[200][2];//use to determine max and ratio at 0.5 of max and frequency
 float impedArray[3];//for printing to SD Card
-float cornerArray[200];
+float cornerArray[200][2];//2 dimensional array to hold ratio and corresponding freq for use in cornerfreq function
 //encoder variables
 const int ENCPINA=D9;
 const int ENCPINB=D10;
@@ -73,7 +73,7 @@ unsigned int lastTimeMeas;//for measurement interval and  publishing to Adafruit
 
 ////declare functions
 float ratAPRead();//function to read pulse, plant and calculate max ratio every second
-float cornerRatio(float cornerArray[200]);//to calculate ratio at 50% max
+float cornerFreq(float cornerArray[200][2]);//to calculate at what frequency ratio =.5
 void writeSD(int logTime, unsigned int frequency, float impedArray[3]);//only impedance variables in array since they're same data type
 void nextSDFile();
 void MQTT_connect();//funtions to connect and maintain connection to Adafruit io
@@ -344,7 +344,6 @@ maxSweep=0;//global variable initialized for each loop
   //if scan button clicked (=scan mode) else in manual encoder to Hz and click (other button) then write data = inputted data interval
 for(i=0;i<200;i++){//keep reading until array full -could just add to hz here
 logTime=(int)Time.now();//unix time at reading
-
   impedArray[2]=ratAPRead();//call function here each iteration of this function takes 1 sec, so built in timer (100 sec for all)
   impedArray[0]=pulse;
   impedArray[1]=plant;
@@ -366,15 +365,16 @@ logTime=(int)Time.now();//unix time at reading
     maxSweep=impedArray[2];
     Serial.printf("sweep max=%0.2f",maxSweep);
   }
-  cornerArray[i]=impedArray[2];
-    frequency=frequency+500;//increment frequency for next loop
+  cornerArray[i][1]=impedArray[2];//fill array with frequency and ratios to calculate which at which freq ratio is closest to 0.5
+  cornerArray[i][0]=(frequency/1.0);//to convert int to float so it can be in array
+  frequency=frequency+500;//increment frequency for next loop
     sineGen.setFreq(frequency);//change frequency in sin wave generator
     
 }
-cornerRat=cornerRatio(cornerArray);//call function to find (frequency at) ratio closest to .5*max
+cornerFrequency=cornerFreq(cornerArray);//call function to find (frequency at) ratio closest to .5
 Serial.printf("scan complete");
 delay(1000);
-Serial.printf("corner ratio=",cornerRat);//this still isn't calculating correctly and need frequency
+Serial.printf("corner frequency=",cornerFrequency);
 delay(1000);
 display.clearDisplay();
   display.setTextSize(2);
@@ -390,11 +390,11 @@ display.clearDisplay();
   delay(500);
   display.clearDisplay();
   display.setCursor(0,5);
-  display.printf("Corner Ratio=");//what should this be called?
+  display.printf("Corner freq=");//what should this be called?
   display.display();
   delay(1000);
   display.clearDisplay();
-display.printf("%0.2f",cornerRat);
+display.printf("%0.2f",cornerFrequency);
 display.display();
 delay(1000);
 nextSDFile();//call function to move to next file
@@ -459,19 +459,19 @@ startRead=millis();
   return ratioMax;//could whole function be returned with 3 data points?
 }
 
-///function to calculate shoulder of magnitude curve (ratio = 0.5(high ratio))
-float cornerRatio(float cornerArray[200]){//will be built as code loops through ratAPReads, so called after that loop
-  float halfSweep;
-  int halfSweepFreq;
-  halfSweep=100;
-  for(i=0;i<200;i++){
-  if ((halfSweep-(0.5*maxSweep))>(cornerArray[i]-(0.5*maxSweep))){//calling global varialbe maxSweep that's found outside function
-   halfSweep=cornerArray[i];
-   halfSweepFreq=(i*500)+500;
+///function to calculate shoulder of magnitude curve (ratio = 0.5) here increments of 500 Hz, maybe will want smaller?
+float cornerFreq(float cornerArray[200][2]){//will be built as code loops through ratAPReads, so called after that loop
+  float halfRatio;
+  float halfRatioFreq;
+  halfRatio=cornerArray[0][1];//initialize with first ratio value
+  for(i=0;i<200;i++){//loop through all ratio values
+  if ((abs(cornerArray[i][1]-0.5))<(abs(halfRatio-0.5))){//current ratio difference compared to value assigned to half ratio.
+   halfRatio=cornerArray[i][1];
+   halfRatioFreq=cornerArray[i][0];//frequency at ratio closest to 0.5
   }
   }
-return halfSweep;
-//return halfSweepFreq
+return halfRatioFreq;
+//return halfRatio; //to check if calculated correctly
 
 
 }
