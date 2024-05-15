@@ -78,7 +78,7 @@ int logTime; //for unix time
 unsigned int lastTimeMeas;//for measurement interval and  publishing to Adafruit
 
 ////declare functions
-float ratAPRead();//function to read pulse, plant and calculate max ratio every second
+float ratioRead();//function to read pulse, plant and calculate max ratio every second
 float cornerFreq(float cornerArray[200][2]);//to calculate at what frequency ratio =.5
 float cornerRatio(float cornerArray[200][2]);//to return that ratio
 void writeSD(int logTime, unsigned int frequency, float impedArray[3]);//only impedance variables in array since they're same data type
@@ -341,7 +341,7 @@ maxSweep=0;//global variable initialized for each loop
   //if scan button clicked (=scan mode) else in manual encoder to Hz and click (other button) then write data = inputted data interval
 for(i=0;i<200;i++){//keep reading until array full -could just add to hz here(200 could be constant that could change with increment)
 logTime=(int)Time.now();//unix time at reading
-  impedArray[2]=ratAPRead();//call function here each iteration of this function takes 1 sec, so built in timer (100 sec for all)
+  impedArray[2]=ratioRead();//call function here each iteration of this function takes 1 sec, so built in timer (100 sec for all)
   impedArray[0]=pulse;
   impedArray[1]=plant;
   writeSD(logTime,frequency,impedArray);//call SD card function
@@ -383,7 +383,7 @@ MQTT_connect();
 MQTT_ping();
 //publish to Adafruit every scan
 //if((millis()-lastTimeMeas > 10000)) {//publishing (how often?)just for every sweep now
- if(mqtt.Update()) {
+ if(mqtt.Update()) {//these were published but very delayed....
        pubFeedZHighRatio.publish(ratioHigh);// ratio at highest Freq
       pubFeedZLowRatio.publish(ratioLow);//publish ratio at lowest freq
       pubFeedZCornerFreq.publish(cornerFrequency);//publish corner freq
@@ -452,7 +452,7 @@ while (sd.exists(fileName)) {  //cycle through files until number not found for 
   Serial.printf("Done \n");
 }
 //function to measure max plant/pulse ratio at 100 frequencies and put into array to write to sd card 
-float ratAPRead() {
+float ratioRead() {
   const int READTIME=1000;//average over 1 sec
   unsigned int startRead;
   float plantMax;
@@ -480,15 +480,19 @@ startRead=millis();
     //ratio=plant/pulse;
     if(plant>plantMax){
       plantMax=plant;
+      Serial.printf("plantMax=%0.2f\n",plantMax);//print these to check why these seem off.
     }
     if(plant<plantMin){
       plantMin=plant;
+      Serial.printf("plantMin=%0.2f\n",plantMin);
     }
     if(pulse>pulseMax){
       pulseMax=pulse;
+      Serial.printf("pulseMax=%0.2f\n",pulseMax);
     }
     if(pulse<pulseMin){
       pulseMin=pulse;
+      Serial.printf("pulseMin=%0.2f\n",pulseMin);
     }
   }
 ratio=(plantMax-plantMin)/(pulseMax-pulseMin);
@@ -523,7 +527,7 @@ return halfRatioFreq;
 
 }
 
-//not sure how to return 2 variables so making separate function for ratio
+//not sure how to return 2 variables so making separate function for corner ratio
 float cornerRatio(float cornerArray[200][2]){//will be built as code loops through ratAPReads, so called after that loop
   float halfRatio;
   float halfRatioFreq;
