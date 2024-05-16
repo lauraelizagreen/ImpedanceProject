@@ -29,6 +29,8 @@ Adafruit_MQTT_Publish pubFeedZHighRatio = Adafruit_MQTT_Publish(&mqtt, AIO_USERN
 Adafruit_MQTT_Publish pubFeedZLowRatio = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/lowRatio");
 Adafruit_MQTT_Publish pubFeedZCornerFreq = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/cornerFreq");
 Adafruit_MQTT_Publish pubFeedZCornerRatio = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/cornerRatio");
+Adafruit_MQTT_Publish pubFeedZRatio = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/ratio");
+/// for sin wave generator
 /// for sin wave generator
 const int AD9833_FSYNC = D14;//will replace pulse pin for sin wave output
 const int MASTER_CLOCK = 25000000;//Hz
@@ -125,7 +127,7 @@ display.clearDisplay();   // clears the screen and buffer
 //display.display();
 
 //initalizing sin wave generator
-  frequency = 500; // initial frequency for sweep
+  frequency = 500; // initial frequency for sweep and manual mode
   sineGen.reset(1);           // Place ad9833 into reset
   //Serial.printf("AD9833 in reset\n");
   sineGen.setFreq(frequency); // Set initial frequency 
@@ -181,7 +183,7 @@ while (sd.exists(fileName)) {  //cycle through files until number not found for 
   pinMode(ENCGREEN, OUTPUT);//lights on encoder switch
   pinMode(ENCBLUE,OUTPUT);
   onOff=true;//for encoder switch-start true since on is off (ground completes circuit)start in manual mode
-  manFreq=500;
+  manFreq=frequency;//initial manual frequency
   pinMode(ENCSWITCH, INPUT_PULLDOWN); //should it be INPUT_PULLDOWN? maybe not in right pin type for that?
   attachInterrupt(ENCSWITCH,encButtonClick,CHANGE);//interupt for when mode button is clicked
 //onOff true will be manual mode
@@ -192,8 +194,8 @@ while (sd.exists(fileName)) {  //cycle through files until number not found for 
 }
 
 void loop() {
-  //MQTT_connect();
- // MQTT_ping();
+  MQTT_connect();
+  MQTT_ping();
   //for manual mode/scan mode
   /*
   if(encSwitch.isClicked()) {//using button heterofile with bool function isClicked make this an interrupt funciton?
@@ -206,7 +208,7 @@ void loop() {
 if(onOff==TRUE){//try arranging these here:
 digitalWrite(ENCBLUE,HIGH);
 digitalWrite(ENCGREEN,LOW);//low turns on/high off, so blue in manual mode(connects to ground to complete circuit)
-
+lastTimeMeas=millis();
 
   
 //Serial.printf("onOff=%i\n",onOff);//un-comment to check
@@ -289,12 +291,17 @@ display.clearDisplay();//print frequency to OLED
 ///every minute show ratio on OLED and publish to Adafruit
 
 //could enter measurement interval on key pad?
-  if((millis()-lastTimeMeas > 10000)) {//publishing (how often?)
+  if((millis()-lastTimeMeas > 10000)) {//publishing (how often?) 10sec for now
+  logTime=(int)Time.now();//unix time at reading-may not use this here....
+  manRatio=ratioRead();//call function to measure and calculate ratio every (sec?)
+  if(mqtt.Update()) {//these were published but very delayed....
+       pubFeedZRatio.publish(manRatio);// ratio at manually set frequency
+  }
   //Serial.printf("measuring\n");//print to serial monitor
   //delay(1000);
-     logTime=(int)Time.now();//unix time at reading
-     manRatio=ratAPRead();//call function to measure and calculate ratio every (sec?)
+     
   //Serial.printf("%i Z magnitude is %0.2f\n",logTime,manRatio);
+  Serial.printf("Publishing to adafruit\n");
   
   display.clearDisplay();
   display.setTextSize(2);
@@ -303,6 +310,12 @@ display.clearDisplay();//print frequency to OLED
   display.printf("measuring");
   display.display();
   delay(1000);
+  display.clearDisplay();
+  display.setCursor(0,0);
+  display.printf("ratio=%0.2f",manRatio);
+  display.display();
+  delay(1000);
+  
       
       
      lastTimeMeas=millis();
@@ -382,7 +395,7 @@ Serial.printf("ratioLow=%0.2f\nratioHigh=%0.2f\ncornerFreq=%0.2f\ncornerRatio=%0
 MQTT_connect();
 MQTT_ping();
 //publish to Adafruit every scan
-//if((millis()-lastTimeMeas > 10000)) {//publishing (how often?)just for every sweep now
+//if((millis()-lastTimeMeas > 10000)) {//publishing (how often?)just for every scan now
  if(mqtt.Update()) {//these were published but very delayed....
        pubFeedZHighRatio.publish(ratioHigh);// ratio at highest Freq
       pubFeedZLowRatio.publish(ratioLow);//publish ratio at lowest freq
