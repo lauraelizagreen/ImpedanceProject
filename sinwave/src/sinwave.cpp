@@ -19,9 +19,9 @@
 #include "Adafruit_MQTT/Adafruit_MQTT_SPARK.h"
 #include "Adafruit_MQTT/Adafruit_MQTT.h"
 #include "credentials.h"//be sure to add to ignore file
-
-SYSTEM_MODE(AUTOMATIC);//to manually set credentials
-
+SYSTEM_MODE(MANUAL);
+//SYSTEM_MODE(AUTOMATIC);//to manually set credentials
+/*
 TCPClient TheClient; 
 
 Adafruit_MQTT_SPARK mqtt(&TheClient,AIO_SERVER,AIO_SERVERPORT,AIO_USERNAME,AIO_KEY);
@@ -30,6 +30,7 @@ Adafruit_MQTT_Publish pubFeedZLowRatio = Adafruit_MQTT_Publish(&mqtt, AIO_USERNA
 Adafruit_MQTT_Publish pubFeedZCornerFreq = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/cornerFreq");
 Adafruit_MQTT_Publish pubFeedZCornerRatio = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/cornerRatio");
 Adafruit_MQTT_Publish pubFeedZRatio = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/ratio");
+*/
 /// for sin wave generator
 /// for sin wave generator
 const int AD9833_FSYNC = D14;//will replace pulse pin for sin wave output
@@ -98,9 +99,11 @@ AD9833 sineGen(AD9833_FSYNC, MASTER_CLOCK);//sine wave generator
 Adafruit_SSD1306 display(OLED_RESET);
 
 void setup() {
+  
   Serial.begin(9600);
   Serial.printf("Starting Serial Monitor...\n");
   delay(5000);
+  
 /*
    WiFi.on();//to manually set credentials
   WiFi.clearCredentials();
@@ -194,8 +197,10 @@ while (sd.exists(fileName)) {  //cycle through files until number not found for 
 }
 
 void loop() {
+  /*
   MQTT_connect();
   MQTT_ping();
+  */
   //for manual mode/scan mode
   /*
   if(encSwitch.isClicked()) {//using button heterofile with bool function isClicked make this an interrupt funciton?
@@ -205,7 +210,7 @@ void loop() {
   */
   //manual mode
   
-if(onOff==TRUE){//try arranging these here:
+if(onOff==TRUE){
 digitalWrite(ENCBLUE,HIGH);
 digitalWrite(ENCGREEN,LOW);//low turns on/high off, so blue in manual mode(connects to ground to complete circuit)
 lastTimeMeas=millis();
@@ -294,9 +299,11 @@ display.clearDisplay();//print frequency to OLED
   if((millis()-lastTimeMeas > 10000)) {//publishing (how often?) 10sec for now
   logTime=(int)Time.now();//unix time at reading-may not use this here....
   manRatio=ratioRead();//call function to measure and calculate ratio every (sec?)
+  /*
   if(mqtt.Update()) {//these were published but very delayed....
        pubFeedZRatio.publish(manRatio);// ratio at manually set frequency
   }
+  */
   //Serial.printf("measuring\n");//print to serial monitor
   //delay(1000);
      
@@ -392,6 +399,7 @@ cornerFreqRatio=cornerRatio(cornerArray);
 Serial.printf("scan complete\n");
 delay(1000);
 Serial.printf("ratioLow=%0.2f\nratioHigh=%0.2f\ncornerFreq=%0.2f\ncornerRatio=%0.2f\n",ratioLow,ratioHigh,cornerFrequency,cornerFreqRatio);
+/*
 MQTT_connect();
 MQTT_ping();
 //publish to Adafruit every scan
@@ -406,7 +414,7 @@ MQTT_ping();
      }
         //lastTimeMeas=millis();
 
-      
+   */   
  
 Serial.printf("corner frequency=%0.02f\n",cornerFrequency);
 delay(1000);
@@ -555,7 +563,7 @@ float cornerRatio(float cornerArray[200][2]){//will be built as code loops throu
   }
 return halfRatio;
 }
-
+/*
 void MQTT_connect() {//actually connects to server, if not connected stuck in loop
   int8_t ret;//photon 2 thinks of integers as 32bits
  
@@ -590,7 +598,7 @@ bool MQTT_ping() {//broker will disconnect if doesn't hear anything, just remind
   }
   return pingStatus;
 }
-
+*/
 ////super short function for button press (interupt)
 void encButtonClick(){  
 onOff=!onOff;

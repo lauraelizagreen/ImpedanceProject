@@ -7,13 +7,18 @@
  */
 
 // Include Particle Device OS APIs
+#include <Particle.h>
 #include <SPI.h>
 #include <SdFat.h>
 #include "Adafruit_BME280.h"
+#include <Wire.h>
+#include "BH1750.h"
+
 
 //const int BMEADDRESS1=0x76;//wont use yet
 const int BMEADDRESS2=0x77;// address set to
 const int BMEDELAY=15000;//btw bme readings
+const int LIGHTDELAY=15000;//btw light meter readings
 float tempC1;//1 is coming from Superstar
 float tempC2;//2 is here
 float pressPA1;
@@ -33,7 +38,8 @@ const uint8_t BASE_NAME_SIZE=sizeof(FILE_BASE_NAME)-1;
 char fileName[13];
 //timer variables
 const int DATAINT=15000;//interval between data collection
-int BMEDataTimer;//when to collect
+unsigned int BMEDataTimer;//when to collect
+unsigned int lightTimer;
 ///declare function
 void writeSD(int timeStamp,float BMEArray[6]);
 
@@ -63,6 +69,7 @@ SdFat sd;
 SdFile file;
 Adafruit_BME280 bme1;//define BME object 
 Adafruit_BME280 bme2;//define BME object 
+BH1750 sensor(0x23, Wire);//declare light sensor object
 
 // Let Device OS manage the connection to the Particle Cloud
 SYSTEM_MODE(AUTOMATIC);
@@ -77,6 +84,10 @@ void setup() {
   Serial.begin(9600);
   waitFor(Serial.isConnected, 5000);
   delay(1000);
+
+  
+
+  
   
 //for LoRa network
   Serial1.begin(115200);//why this number?
@@ -122,11 +133,18 @@ while (sd.exists(fileName)) {  //cycle through files until number not found for 
   if (status==false) {//little bit fancier initialization
     Serial.printf("BME280 at address 0x%02X failed to start",BMEADDRESS2);
   }
+//initialize light sensor
+  sensor.begin();
+
+  sensor.set_sensor_mode(BH1750::forced_mode_high_res2);
+
+  Serial.begin();
   
 
 
   Particle.syncTime();//don't need time zone for unix
   BMEDataTimer=millis();
+  lightTimer=millis();
   
 }
 
@@ -169,7 +187,7 @@ void loop() {//will need to have variables for both BME's on Argon
   }
   
   if((millis()-BMEDataTimer)>BMEDELAY){//or use instead of timer object  
-  timeStamp=(int)Time.now();//function to get unix time
+  timeStamp2=(int)Time.now();//function to get unix time
   //for(i=0;i<9;i++){}
   //BMEArray[i] =bme1.readTemperature();//deg C
   //BMEArray[0]=bme1.readTemperature();//deg C
@@ -179,13 +197,19 @@ void loop() {//will need to have variables for both BME's on Argon
   BMEArray[4] = bme2.readHumidity();//%RH
   BMEArray[5] =bme2.readPressure();//pascals
  // Serial.printf("time=%i\ntempC1=%0.2f\nhumidRH1=%0.2f\npressPA1=%0.2f\n",timeStamp,BMEArray[0],BMEArray[1],BMEArray[2]);
- Serial.printf("time=%i\ntempC1=%0.2f\nhumidRH1=%0.2f\npressPA1=%0.2f\n",timeStamp,BMEArray[3],BMEArray[4],BMEArray[5]);
+ Serial.printf("time=%i\ntempC1=%0.2f\nhumidRH1=%0.2f\npressPA1=%0.2f\n",timeStamp2,BMEArray[3],BMEArray[4],BMEArray[5]);
   
  // writeSD(timeStamp,BMEArray);//call function with array as argument
   BMEDataTimer=millis();
 
 }
+if((millis()-lightTimer)>LIGHTDELAY){
+sensor.make_forced_measurement();//read light sensor
+
+  Serial.printf("light level is %f\n", sensor.get_light_level());
+  lightTimer=millis();
   
+}
 }
 
 ///////function to write to SD Card in lines///////
